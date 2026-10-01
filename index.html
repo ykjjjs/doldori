@@ -1,0 +1,1685 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>무한 거울</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230A1430'/%3E%3Crect x='7' y='9' width='50' height='40' rx='5' fill='none' stroke='%235FE3FF' stroke-width='4'/%3E%3Crect x='31' y='15' width='21' height='17' rx='2.5' fill='none' stroke='%235FE3FF' stroke-width='3'/%3E%3Crect x='42' y='19' width='8' height='7' rx='1' fill='none' stroke='%235FE3FF' stroke-width='2'/%3E%3C/svg%3E">
+<!-- 글꼴은 뒤에서 받는다 — 인터넷이 느리거나 없어도 앱이 바로 뜨게(그동안은 맑은 고딕) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'">
+<style>
+:root{
+  --bg:#0A1430; --ink:#EAF1FF; --mute:#A4B6DA; --dim:#7487B0;
+  --line:rgba(160,190,255,.18); --glass:rgba(255,255,255,.06);
+  --sap:#3E9BFF; --cyan:#5FE3FF; --grad:linear-gradient(135deg,#0A2A6E,#1552D6 55%,#3E9BFF);
+  --font:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;color:var(--ink);font-family:var(--font);
+  background:radial-gradient(90% 70% at 50% -10%,#1E4592 0%,#102552 45%,var(--bg) 100%) fixed}
+.wrap{max-width:1640px;margin:0 auto;padding:22px 16px 40px}
+h1{margin:0;font-size:clamp(22px,3vw,30px);font-weight:800;letter-spacing:-.02em}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap}
+.lang button{padding:6px 12px;font-size:13px}
+.lede{margin:6px 0 0;color:var(--mute);font-size:14.5px;line-height:1.65;word-break:keep-all;max-width:80ch}
+.stage{position:relative;margin:18px 0 8px;border-radius:16px;overflow:hidden;background:#050A18;border:1px solid var(--line);
+  aspect-ratio:16/9;box-shadow:0 30px 60px -30px rgba(0,0,0,.75);touch-action:none;user-select:none}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.sel{--fc:#5FE3FF;position:absolute;border:2px solid var(--fc);box-shadow:0 0 0 1px rgba(0,0,0,.35),0 0 18px color-mix(in srgb,var(--fc) 45%,transparent);cursor:move}
+.sel i{position:absolute;right:-8px;bottom:-8px;width:16px;height:16px;border-radius:5px;background:var(--fc);box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:nwse-resize}
+.stage.live .sel{border-style:dashed}
+.sel.ghost{border-color:transparent;box-shadow:none}   /* 움직이는 동안은 그림 속 테두리가 대신 — 누르면 멈추고 다시 보인다 */
+.sel.ghost i{opacity:0}
+.stage:hover .sel.ghost{border-color:color-mix(in srgb,var(--fc) 45%,transparent);border-style:dashed}
+.stage:hover .sel.ghost i{opacity:.75}
+.drop{position:absolute;inset:0;display:grid;place-items:center;padding:16px;text-align:center;background:rgba(5,10,24,.74);border:2px dashed var(--cyan);border-radius:16px;
+  font-size:clamp(15px,2vw,19px);font-weight:700;line-height:1.6;opacity:0;pointer-events:none;transition:opacity .15s}
+.stage.dragging .drop{opacity:1}
+.recdot{position:absolute;left:14px;top:12px;display:none;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:rgba(0,0,0,.6);font-size:13px;font-weight:700;pointer-events:none}
+.recdot::before{content:"";width:10px;height:10px;border-radius:50%;background:#FF4D4D;animation:blink 1s steps(2) infinite}
+.stage.recording .recdot{display:inline-flex}
+@keyframes blink{50%{opacity:.2}}
+.meta{display:flex;justify-content:space-between;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--mute)}
+.meta b{color:var(--ink);font-weight:700}
+.bar{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cards{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px}
+.card{display:grid;gap:11px;align-content:start;min-width:0;padding:14px 15px;border-radius:16px;background:var(--glass);border:1px solid var(--line);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.card.wide{grid-column:1/-1}
+.card h2{margin:0;font-size:15px;font-weight:800}
+.card h2 small{margin-left:6px;font-size:12.5px;font-weight:500;color:var(--dim)}
+.row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+button{font:inherit;font-size:14px;font-weight:700;color:var(--ink);background:rgba(255,255,255,.08);border:1px solid var(--line);
+  border-radius:999px;padding:9px 16px;cursor:pointer}
+button:hover{border-color:rgba(160,190,255,.45)}
+button.pri{background:var(--grad);border-color:transparent}
+button.on{box-shadow:0 0 0 2px var(--cyan)}
+button.stop{background:#B3261E;border-color:transparent}
+button[hidden]{display:none}
+.sl{display:grid;grid-template-columns:7.5em minmax(0,1fr) 3.6em;gap:10px;align-items:center;font-size:13px;color:var(--mute);flex:1 1 260px}
+.sl output{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--sap)}
+.chk{display:inline-flex;gap:7px;align-items:center;font-size:13px;color:var(--mute);cursor:pointer}
+.lab{font-size:13px;color:var(--mute)}
+.cpick{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--mute)}
+input[type=color]{width:36px;height:30px;padding:2px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.06);cursor:pointer}
+textarea{width:100%;min-height:62px;resize:vertical;font:inherit;font-size:15px;line-height:1.5;color:var(--ink);background:rgba(0,0,0,.22);
+  border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+textarea::placeholder{color:var(--dim)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:7px 13px;font-size:13px;background:transparent}
+.seg button.on{background:rgba(62,155,255,.4);box-shadow:none}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chips button{padding:8px 15px;font-size:13.5px}
+.chips button.on{background:rgba(62,155,255,.38)}
+.sw{display:flex;flex-wrap:wrap;gap:7px}
+.sw button{display:inline-flex;align-items:center;gap:7px;padding:4px 11px 4px 4px;font-size:12.5px;font-weight:600}
+.sw button i{width:22px;height:22px;border-radius:50%;border:2px solid;flex:none}
+.fname{font-size:12.5px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.tip{margin:0;font-size:12.5px;color:var(--dim);line-height:1.6;word-break:keep-all}
+.status{margin-top:12px;font-size:13px;color:var(--mute);line-height:1.6;min-height:1.6em;word-break:keep-all}
+.status.err{color:#FFB4A9}
+.help{font-size:12.5px;color:var(--dim);line-height:1.75;word-break:keep-all}
+.help b{color:var(--mute)}
+input[type=file]{display:none}
+.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;opacity:0;pointer-events:none;transition:opacity .2s}
+.stage iframe.show{opacity:1;pointer-events:auto}
+.stage.framing .sel,.stage.taking .sel,.stage.taking .recdot,.stage.taking .drop{visibility:hidden}
+.card[hidden]{display:none}
+button:disabled,select:disabled,input:disabled{opacity:.45;cursor:not-allowed}
+a.btn{display:inline-flex;align-items:center;font-size:14px;font-weight:700;color:var(--ink);text-decoration:none;background:rgba(255,255,255,.08);
+  border:1px solid var(--line);border-radius:999px;padding:9px 16px}
+a.btn.pri{background:var(--grad);border-color:transparent}
+select,input.link,input[type=number]{font:inherit;font-size:14px;color:var(--ink);background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+select option{background:#102552;color:var(--ink)}
+input.link{flex:1 1 240px;min-width:0}
+input.link[readonly]{color:var(--cyan)}
+input.link::placeholder{color:var(--dim)}
+input[type=number]{width:4.4em}
+.segrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-radius:10px}
+.segrow > .lab:first-child{min-width:3.2em;font-weight:700;color:var(--ink)}
+.segrow button{padding:8px 13px;font-size:13px}
+.segrow.over{outline:2px dashed var(--cyan);outline-offset:4px}
+.vids{display:grid;gap:14px}
+.vid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:14px;align-items:center}
+.vid video{width:100%;aspect-ratio:16/9;border-radius:10px;background:#000;display:block}
+.vid b{display:block;font-size:14px;word-break:break-all}
+.vid span{display:block;margin:4px 0 10px;font-size:13px;color:var(--mute);word-break:keep-all}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px}
+.thumbs[hidden]{display:none}
+.thumb{position:relative;width:96px;aspect-ratio:16/9;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#050A18;cursor:grab}
+.thumb canvas{width:100%;height:100%;display:block;pointer-events:none}
+.thumb b{position:absolute;left:5px;top:3px;font-size:12px;font-weight:800;text-shadow:0 1px 3px #000;pointer-events:none}
+.thumb button{position:absolute;right:3px;top:3px;width:22px;height:22px;padding:0;font-size:14px;line-height:1;border-radius:50%;background:rgba(0,0,0,.62)}
+.thumb.dragging{opacity:.35}
+.thumb.over{outline:2px dashed var(--cyan);outline-offset:2px}
+/* 화면(무대)은 늘 보이게 — 넓은 화면은 왼쪽에 붙어 있고 도구는 오른쪽에서 넘긴다. 좁은 화면은 위에 붙어 있고 도구가 그 아래로 지나간다 */
+.main{display:grid;gap:0 18px;align-items:start}
+.view,.tools{min-width:0}
+@media (min-width:1100px){
+  .main{grid-template-columns:minmax(0,1.6fr) minmax(360px,1fr)}
+  .view{position:sticky;top:0;padding-bottom:8px}
+  .view .stage{max-width:calc((100vh - 230px) * 16 / 9);margin:18px auto 8px}
+  .tools .vid{grid-template-columns:1fr}
+}
+@media (max-width:1099.98px){
+  .view{display:contents}
+  .stage{position:sticky;top:6px;z-index:5;width:min(100%,calc(46vh * 16 / 9));margin:18px auto 8px}
+}
+/* 데모 연습 도우미 로봇 — Joo-JeoB 안내 로봇과 같은 모양 · 움직임(부품을 짚고 말풍선으로 설명) */
+#bot{position:fixed;left:0;top:0;z-index:60;display:flex;align-items:flex-end;gap:6px;transform:translate(var(--bx,-300px),var(--by,-300px));
+  transition:transform .55s cubic-bezier(.2,.8,.2,1);pointer-events:none}
+#bot.flip{flex-direction:row-reverse}
+#bot.snap,#botRing.snap{transition:none}
+body.rec #bot,body.rec #botRing,body.rec #botTap{visibility:hidden}
+.bot-fig{pointer-events:auto;flex:none;width:66px;height:86px;padding:0;border:0;border-radius:22px;background:none;cursor:pointer}
+.bot-fig:hover{border:0}
+.bot-fig svg{width:100%;height:100%;display:block;overflow:visible}
+.bot-fig .bob{animation:botBob 2.6s ease-in-out infinite}
+.bot-fig .jet{transform-box:fill-box;transform-origin:50% 0;animation:botJet .9s ease-in-out infinite alternate}
+.bot-fig .arm-l,.bot-fig .arm-r{transform-box:fill-box;transform-origin:50% 8%;transition:transform .5s}
+.bot-fig .arm-l{transform:rotate(var(--la,10deg))}
+.bot-fig .arm-r{transform:rotate(var(--ra,-10deg))}
+.bot-fig .eyes{transform:translate(var(--ex,0),var(--ey,0));transition:transform .4s}
+#bot.bot-wave .arm-r{animation:botWave .42s ease-in-out 5 alternate}
+#bot.bot-hop .bot-fig{animation:botHop .6s ease-out}
+@keyframes botBob{50%{transform:translateY(-6px)}}
+@keyframes botJet{to{opacity:.5;transform:scaleY(.72)}}
+@keyframes botWave{from{transform:rotate(-115deg)}to{transform:rotate(-165deg)}}
+@keyframes botHop{35%{transform:translateY(-16px)}}
+.bot-bub{pointer-events:auto;width:min(340px,calc(100vw - 96px));margin-bottom:30px;padding:11px 13px 10px;border-radius:16px;background:#fff;color:#0B1B3A;
+  box-shadow:0 18px 40px -12px rgba(0,0,0,.6),0 0 0 1px rgba(95,227,255,.55)}
+.bot-bub[hidden]{display:none}
+.bot-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:#4A5A7A}
+.bot-top b{font-weight:800;color:#1552D6}
+.bot-mode{display:inline-flex;border:1px solid #CFDAEC;border-radius:999px;overflow:hidden}
+.bot-mode button{border:0;border-radius:0;padding:3px 9px;font-size:11.5px;font-weight:700;color:#4A5A7A;background:transparent}
+.bot-mode button.on{background:#1552D6;color:#fff;box-shadow:none}
+#botText{margin:7px 0 9px;font-size:14px;line-height:1.6;word-break:keep-all;min-height:3.2em}
+#botText .off{color:transparent}
+.bot-btns{display:flex;gap:6px;align-items:center}
+.bot-btns span{flex:1}
+.bot-btns button{padding:6px 12px;font-size:12.5px;color:#0B1B3A;background:#EEF3FB;border-color:#CFDAEC}
+.bot-btns button.pri{background:var(--grad);color:#fff;border-color:transparent}
+#botRing{position:fixed;z-index:59;border-radius:12px;pointer-events:none;transition:all .45s cubic-bezier(.2,.8,.2,1);
+  box-shadow:0 0 0 2px #5FE3FF,0 0 0 7px rgba(95,227,255,.22),0 0 28px rgba(95,227,255,.55)}
+#botRing[hidden]{display:none}
+#botTap{position:fixed;z-index:61;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#5FE3FF;pointer-events:none;opacity:0}
+#botTap.go{animation:botTap .7s ease-out}
+@keyframes botTap{0%{opacity:1;box-shadow:0 0 0 0 rgba(95,227,255,.9)}100%{opacity:0;box-shadow:0 0 0 28px rgba(95,227,255,0)}}
+@media (prefers-reduced-motion:reduce){.bot-fig .bob,.bot-fig .jet{animation:none}#bot,#botRing{transition:none}}
+@media (max-width:640px){.sl{grid-template-columns:6em minmax(0,1fr) 3.2em}.vid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 data-en="Infinite Mirror">무한 거울</h1>
+    <div class="seg lang" role="group" aria-label="화면 언어 · Language"><button type="button" data-lang="ko">한국어</button><button type="button" data-lang="en">English</button></div>
+  </header>
+  <p class="lede" data-en="Share your whole screen and this app’s preview appears inside it. The preview is shared again, shows up in the preview again, and so on — pulling you endlessly inward. Pick a motion, add your own image, text, colors and music, attach other HTML pages as an intro or ending, and make it all into a video (MP4).">전체 화면을 공유하면 그 화면 안에 이 앱의 미리보기도 들어갑니다. 미리보기가 다시 공유되고, 그게 또 미리보기에 비치기를 반복해서
+    끝없이 안으로 빨려 들어갑니다. 움직임을 고르고, 내 이미지 · 글자 · 색 · 음악을 넣고, 다른 HTML 을 인트로 · 엔딩으로 붙여 영상(MP4)으로 만들어 보세요.</p>
+
+  <div class="main">
+  <div class="view">
+  <div class="stage" id="stage">
+    <canvas id="cv" role="img" aria-label="화면 안에 같은 화면이 끝없이 겹쳐 들어가는 무한 거울" data-en-aria-label="The same screen nested inside itself, endlessly"></canvas>
+    <iframe id="segFrame" title="인트로 · 엔딩" data-en-title="Intro / ending" allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock" tabindex="-1"></iframe>
+    <div class="sel" id="sel" title="끌어서 옮기기 · 오른쪽 아래 손잡이로 크기 · 빈 곳을 끌면 새로 그리기 · 더블클릭하면 처음 자리" data-en-title="Drag to move · resize with the bottom-right handle · drag on empty space to draw a new one · double-click to reset"><i></i></div>
+    <div class="recdot" id="recDot">녹화 중</div>
+    <div class="drop" data-en-html="Drop it here<br>Images (several at once, too) become the endless tunnel, music becomes the background music">여기에 놓으세요<br>이미지(여러 장도)는 끝없는 터널로, 음악은 배경음악으로</div>
+  </div>
+  <div class="meta"><span id="selInfo"></span><span id="fps"></span></div>
+
+  <div class="bar" role="group" aria-label="모드와 저장" data-en-aria-label="Mode and save">
+    <button type="button" data-mode="sim" class="on" data-en="Simulated">흉내 모드</button>
+    <button type="button" data-mode="photo" data-en="My image">내 이미지</button>
+    <button type="button" data-mode="tab" data-en="Share this tab">이 탭 공유</button>
+    <button type="button" data-mode="screen" data-en="Share entire screen">전체 화면 공유</button>
+    <button type="button" id="stopBtn" class="stop" hidden data-en="Stop sharing">공유 중지</button>
+    <span style="flex:1"></span>
+    <button type="button" id="resetBtn" data-en="Reset frame">처음 자리로</button>
+    <button type="button" id="saveBtn" data-en="Save PNG">PNG 저장</button>
+    <button type="button" id="recBtn" class="pri">영상 만들기</button>
+  </div>
+  <div class="status" id="status" aria-live="polite"></div>
+  </div>
+
+  <div class="tools">
+  <div class="cards">
+    <section class="card wide" id="outCard" hidden aria-labelledby="hOut">
+      <h2 id="hOut" data-en-html="Your videos <small>play them, then download · they disappear when you reload</small>">만든 영상 <small>재생해 보고 내려받으세요 · 새로 고치면 사라집니다</small></h2>
+      <div class="vids" id="outList"></div>
+    </section>
+
+    <section class="card wide" aria-labelledby="hMov">
+      <h2 id="hMov" data-en="Motion">움직임</h2>
+      <div class="chips" id="motions" data-k="motion" role="group" aria-label="움직임 고르기" data-en-aria-label="Choose a motion"></div>
+      <p class="tip" id="motionTip"></p>
+      <div class="row">
+        <label class="sl"><span data-en="Speed">빠르기</span><input type="range" id="spd" min="0" max="3" step="0.1"><output id="spdO"></output></label>
+        <label class="sl"><span data-en="Rotation">회전</span><input type="range" id="rot" min="-30" max="30" step="1"><output id="rotO"></output></label>
+        <label class="chk"><input type="checkbox" id="flip"> <span data-en="Mirror flip">좌우 뒤집기</span></label>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="hImg">
+      <h2 id="hImg" data-en-html="Images <small>one inside another, endlessly</small>">이미지 <small>여러 장이 차례로 안으로</small></h2>
+      <div class="row">
+        <button type="button" id="imgBtn" class="pri" data-en="Add images">이미지 넣기</button>
+        <button type="button" id="imgOff" hidden data-en="Remove all">모두 빼기</button>
+        <span class="fname" id="imgName"></span>
+        <input type="file" id="imgFile" accept="image/*" multiple>
+      </div>
+      <div class="thumbs" id="thumbs" hidden></div>
+      <div class="row"><span class="lab" data-en="Fit">놓는 방식</span>
+        <div class="seg" data-k="fit"><button type="button" data-v="cover" data-en="Fill">꽉 채우기</button><button type="button" data-v="contain" data-en="Show all">다 보이게</button></div>
+      </div>
+      <p class="tip" data-en="Pick several at once (up to 20): #2 goes into the frame of #1, #3 into #2 … and after the last comes #1 again. Drag the thumbnails to reorder, × to remove. You can also drop images onto the screen or paste with Ctrl+V. Images never leave this PC.">여러 장을 한꺼번에 골라도 됩니다(20장까지) — 1번 사진의 테두리 자리에 2번, 그 안에 3번 … 마지막 다음은 다시 1번. 작은 그림을 끌어 순서를 바꾸고 × 로 뺍니다. 화면에 끌어다 놓거나 Ctrl+V 로 붙여 넣어도 됩니다. 이미지는 이 PC 밖으로 나가지 않습니다.</p>
+    </section>
+
+    <section class="card" aria-labelledby="hTxt">
+      <h2 id="hTxt" data-en-html="Text <small>goes into every layer</small>">글자 <small>겹마다 함께 빨려 들어갑니다</small></h2>
+      <textarea id="txt" rows="2" maxlength="160" placeholder="예) 무한히 축하합니다&#10;줄을 바꾸면 두 줄이 됩니다" data-en-placeholder="e.g. Happy birthday, forever&#10;A new line makes a second line"></textarea>
+      <div class="row">
+        <button type="button" id="trBtn" data-en="Translate to English">영어로 번역</button>
+        <label class="chk"><input type="checkbox" id="trKeep"> <span data-en="Keep the Korean too (both languages)">한글도 남기기(두 언어)</span></label>
+      </div>
+      <label class="sl"><span data-en="Text size">글자 크기</span><input type="range" id="size" min="2" max="16" step="0.5"><output id="sizeO"></output></label>
+      <div class="row">
+        <label class="cpick"><span data-en="Text color">글자 색</span> <input type="color" id="tcol"></label>
+        <span class="lab" data-en="Position">자리</span>
+        <div class="seg" data-k="pos"><button type="button" data-v="top" data-en="Top">위</button><button type="button" data-v="mid" data-en="Middle">가운데</button><button type="button" data-v="bot" data-en="Bottom">아래</button></div>
+      </div>
+      <p class="tip" data-en="“Translate to English” uses the translator built into Chrome, so your text never leaves this PC (Chrome 138 or later on a computer).">「영어로 번역」 은 크롬에 들어 있는 번역기를 써서 글이 이 PC 밖으로 나가지 않습니다(PC 크롬 138 이상).</p>
+    </section>
+
+    <section class="card" aria-labelledby="hCol">
+      <h2 id="hCol" data-en="Color">색</h2>
+      <div class="sw" id="themes" role="group" aria-label="색 묶음" data-en-aria-label="Color sets"></div>
+      <div class="row">
+        <label class="cpick"><span data-en="Background">바탕</span> <input type="color" id="bg1" aria-label="바탕 위쪽 색" data-en-aria-label="Background top color"><input type="color" id="bg2" aria-label="바탕 아래쪽 색" data-en-aria-label="Background bottom color"></label>
+        <label class="cpick"><span data-en="Frame">테두리</span> <input type="color" id="frame"></label>
+      </div>
+      <label class="sl"><span data-en="Hue shift">색 돌리기</span><input type="range" id="hue" min="0" max="60" step="1"><output id="hueO"></output></label>
+      <label class="sl"><span data-en="Depth shade">깊이 그늘</span><input type="range" id="shade" min="0" max="50" step="1"><output id="shadeO"></output></label>
+      <label class="chk"><input type="checkbox" id="flow"> <span data-en="Flowing colors (rainbow)">색이 흐르게(무지개)</span></label>
+    </section>
+
+    <section class="card" aria-labelledby="hMus">
+      <h2 id="hMus" data-en-html="Music <small>your own file · loops</small>">음악 <small>내가 고른 파일 · 반복 재생</small></h2>
+      <div class="row">
+        <button type="button" id="musBtn" class="pri" data-en="Choose music">음악 고르기</button>
+        <button type="button" id="playBtn" hidden>재생</button>
+        <span class="fname" id="musName"></span>
+        <input type="file" id="musFile" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.opus">
+      </div>
+      <label class="sl"><span data-en="Volume">소리 크기</span><input type="range" id="vol" min="0" max="1" step="0.05"><output id="volO"></output></label>
+      <label class="chk"><input type="checkbox" id="beat"> <span data-en="Move to the beat">음악에 맞춰 출렁이기</span></label>
+      <p class="tip" data-en="mp3 · m4a · wav files. With “Make video”, the music starts from the beginning when the mirror part starts.">mp3 · m4a · wav 파일. 「영상 만들기」 를 누르면 거울 부분이 시작될 때 음악이 처음부터 함께 담깁니다.</p>
+    </section>
+
+    <section class="card wide" aria-labelledby="hVid">
+      <h2 id="hVid" data-en-html="Make a video <small>intro → infinite mirror → ending, as one MP4</small>">영상 만들기 <small>인트로 → 무한 거울 → 엔딩을 이어 MP4 로</small></h2>
+      <div class="row">
+        <label class="lab" for="len" data-en="Mirror part length">거울 부분 길이</label>
+        <select id="len"><option value="10" data-en="10 s">10초</option><option value="20" data-en="20 s">20초</option><option value="30" data-en="30 s">30초</option><option value="60" data-en="1 min">1분</option><option value="song" data-en="One song">음악 한 곡</option><option value="manual" data-en="Until I finish">직접 끝내기</option></select>
+        <span class="tip" id="lenTip"></span>
+      </div>
+      <div class="segrow" data-seg="intro">
+        <span class="lab" data-en="Intro">인트로</span>
+        <input class="link" id="introUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://… 다른 HTML 링크" data-en-placeholder="https://… link to another HTML page" aria-label="인트로 HTML 링크" data-en-aria-label="Intro HTML link">
+        <button type="button" data-act="file" data-en="File">파일</button>
+        <button type="button" data-act="try">미리 보기</button>
+        <button type="button" data-act="clear" data-en="Remove">빼기</button>
+        <label class="lab"><input type="number" id="introSec" min="1" max="60" step="1" aria-label="인트로 길이(초)" data-en-aria-label="Intro length (seconds)"> <span data-en="s">초</span></label>
+      </div>
+      <div class="segrow" data-seg="end">
+        <span class="lab" data-en="Ending">엔딩</span>
+        <input class="link" id="endUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://… 다른 HTML 링크" data-en-placeholder="https://… link to another HTML page" aria-label="엔딩 HTML 링크" data-en-aria-label="Ending HTML link">
+        <button type="button" data-act="file" data-en="File">파일</button>
+        <button type="button" data-act="try">미리 보기</button>
+        <button type="button" data-act="clear" data-en="Remove">빼기</button>
+        <label class="lab"><input type="number" id="endSec" min="1" max="60" step="1" aria-label="엔딩 길이(초)" data-en-aria-label="Ending length (seconds)"> <span data-en="s">초</span></label>
+      </div>
+      <input type="file" id="segFile" accept=".html,.htm,text/html">
+      <p class="tip" data-en="Put in a link (or a single-file .html, or a file path starting with C:\) and that page is attached before or after the video. You can also drop an .html file onto its row. Check it first with “Preview” — sites that block being placed inside other pages won’t show.">링크(또는 파일 하나로 된 .html · C:\ 로 시작하는 파일 경로)를 넣으면 그 페이지가 영상 앞뒤에 붙습니다. 줄에 .html 파일을 끌어다 놓아도 됩니다.
+        넣은 뒤 「미리 보기」 로 먼저 확인하세요 — 다른 페이지 안에 넣는 것을 막아 둔 사이트는 안 보입니다.</p>
+      <p class="tip" data-en="With an intro or ending, Chrome asks once to “share this tab” when you press “Make video” — press Allow. It records exactly what is on screen, so don’t cover the window or scroll while recording. The sound you hear (that page’s sound + music) is recorded as is, and the music plays only during the mirror part.">인트로 · 엔딩이 있으면 「영상 만들기」 를 누를 때 크롬이 「이 탭 공유」 를 한 번 묻습니다 — 「허용」 을 누르세요. 화면에 보이는 그대로 녹화하므로
+        녹화하는 동안 창을 가리거나 스크롤하지 마세요. 이때는 들리는 소리(그 페이지 소리 + 음악)가 그대로 녹음되고, 음악은 거울 부분에만 나옵니다.</p>
+    </section>
+  </div>
+
+  <p class="help" data-en-html="<b>Simulated</b> — draws, without sharing anything, how a screen looks when it reflects itself. Drag the frame to move it and resize it with the bottom-right handle. Drag on empty space to draw a new one; press and hold to pause. Move the cursor and it follows a little later in each layer.<br><b>Share this tab · Share entire screen</b> — when Chrome asks, pick this tab (or the entire screen). This window is inside the shared screen, so the preview reflects itself and truly goes on forever. A little rotation or hue shift builds up with every reflection into a swirl or a rainbow. The frame then marks the capture area that “Save PNG” crops.<br><b>Make a video</b> — in the “Make a video” card, choose the mirror length and press “Make video”; it records that long and puts the result under “Your videos” at the top (with “Until I finish”, press once more to end). Play it, then press “Download” for the MP4 — ready to send in a chat. Put another HTML page in the intro/ending rows to attach it before or after. Keep this tab visible while recording.<br>Images and music are used only on this PC and are never sent anywhere. Motion, text and color settings are remembered in this browser."><b>흉내 모드</b> — 화면을 공유하지 않고, 화면이 자기 안에 비치는 모양을 계산해 그립니다. 테두리를 끌어 옮기고 오른쪽 아래 손잡이로 크기를 바꿔 보세요.
+    빈 곳을 끌면 새로 그려지고, 누르고 있으면 멈춥니다. 커서를 움직이면 겹마다 조금씩 늦게 따라옵니다.<br>
+    <b>이 탭 공유 · 전체 화면 공유</b> — 크롬이 물으면 이 탭(또는 화면 전체)을 고르세요. 이 창이 공유되는 화면 안에 들어 있으니 미리보기가 자기를 다시 비추며 진짜로 끝없이 들어갑니다.
+    회전 · 색 돌리기를 조금만 주면 비칠 때마다 쌓여 소용돌이 · 무지개가 됩니다. 이때 테두리는 「PNG 저장」 으로 잘라 둘 캡처 영역입니다.<br>
+    <b>영상 만들기</b> — 「영상 만들기」 칸에서 거울 부분 길이를 고르고 누르면 그 길이만큼 녹화해 맨 위 「만든 영상」 칸에 올립니다(직접 끝내기면 한 번 더 눌러 끝냅니다).
+    재생해 보고 「내려받기」 로 MP4 를 받으세요 — 카톡에 바로 보낼 수 있습니다. 인트로 · 엔딩 줄에 다른 HTML 을 넣으면 영상 앞뒤에 붙습니다. 녹화하는 동안 이 탭을 가리지 마세요.<br>
+    이미지 · 음악은 이 PC 안에서만 쓰이고 어디로도 보내지 않습니다. 움직임 · 글자 · 색 설정은 이 브라우저에 기억됩니다.</p>
+  </div>
+  </div>
+</div>
+<div id="botRing" hidden></div>
+<i id="botTap"></i>
+<div id="bot" class="flip">
+  <button type="button" class="bot-fig" id="botFig" aria-label="데모 연습 도우미 — 누르면 발표 순서를 함께 연습합니다" data-en-aria-label="Demo practice helper — press to rehearse the demo together" title="데모 연습 도우미" data-en-title="Demo practice helper">
+    <svg viewBox="0 0 200 260" aria-hidden="true"><defs>
+      <linearGradient id="mbB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#B7D6F8"/></linearGradient>
+      <linearGradient id="mbV" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1A4A92"/><stop offset="1" stop-color="#050B1C"/></linearGradient>
+      <radialGradient id="mbC"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#7FE7FF"/><stop offset="1" stop-color="#7FE7FF" stop-opacity=".7"/></radialGradient>
+      <radialGradient id="mbJ" cx=".5" cy="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#7FE7FF" stop-opacity=".55"/><stop offset="1" stop-color="#7FE7FF" stop-opacity="0"/></radialGradient>
+    </defs><g class="bob">
+      <ellipse class="jet" cx="100" cy="228" rx="26" ry="18" fill="url(#mbJ)"/>
+      <line x1="100" y1="34" x2="100" y2="14" stroke="#B7D6F8" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="100" cy="10" r="7" fill="url(#mbC)"/>
+      <rect class="arm-l" x="24" y="124" width="26" height="74" rx="13" fill="url(#mbB)"/>
+      <rect class="arm-r" x="150" y="124" width="26" height="74" rx="13" fill="url(#mbB)"/>
+      <rect x="54" y="118" width="92" height="98" rx="42" fill="url(#mbB)"/>
+      <circle cx="100" cy="164" r="15" fill="url(#mbC)"/>
+      <circle cx="41" cy="72" r="9" fill="#B7D6F8"/><circle cx="159" cy="72" r="9" fill="#B7D6F8"/>
+      <rect x="44" y="30" width="112" height="86" rx="40" fill="url(#mbB)"/>
+      <rect x="56" y="46" width="88" height="54" rx="26" fill="url(#mbV)"/>
+      <g class="eyes"><ellipse cx="82" cy="73" rx="8" ry="10" fill="#7FE7FF"/><ellipse cx="118" cy="73" rx="8" ry="10" fill="#7FE7FF"/></g>
+      <path d="M88 90 Q100 97 112 90" stroke="#7FE7FF" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    </g></svg>
+  </button>
+  <div class="bot-bub" id="botBubble" hidden role="dialog" aria-live="polite" aria-labelledby="botStep">
+    <div class="bot-top"><b id="botStep"></b><div class="bot-mode" role="group" aria-label="연습 방식" data-en-aria-label="Practice style"><button type="button" data-bm="show"></button><button type="button" data-bm="try"></button></div></div>
+    <p id="botText"></p>
+    <div class="bot-btns"><button type="button" id="botUndo" hidden></button><span></span><button type="button" id="botPrev"></button><button type="button" id="botClose"></button><button type="button" id="botNext" class="pri"></button></div>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const stage = $('stage'), cv = $('cv'), cx = cv.getContext('2d'), sel = $('sel');
+  const ui = { status: $('status'), selInfo: $('selInfo'), fps: $('fps') };
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  /* ── 상태 ── */
+  let mode = 'sim';                        // sim(흉내) · photo(내 이미지) · tab · screen(진짜 공유)
+  let W = 1280, H = 720, DPR = 1;
+  const DEF = { x: .31, y: .31, w: .38, h: .38 };   // 거울(미리보기) 자리 — 화면 비율(0~1). 정중앙
+  const R = Object.assign({}, DEF);
+  let stream = null, video = null, photos = [];       // photos — 내 이미지들(1번이 맨 앞, 그 테두리 안에 2번 …)
+  let ptr = null;                          // 화면 위 커서(캔버스 좌표) — 흉내 모드는 겹마다 늦게 그린다
+  const trail = [];                        // 커서 자취(겹마다 늦게)
+  let mt = 0, lastT = 0, frames = 0, fpsT = 0, holdUntil = 0;   // mt — 움직임 시계(빠르기 · 박자만큼 간다). holdUntil — 테두리를 만지는 동안(+1.5초)은 멈추고 맨 바깥에 맞춘다
+  let FF = 'sans-serif';                   // 캔버스 글꼴(본문 글꼴 그대로)
+  let liveBox = null;                      // 진짜 공유 — 캔버스 위에 영상이 그려진 자리(캡처 영역을 영상 좌표로 바꿀 때)
+  let bump = 0;                            // 음악 박자(0~1) — 쿵 하면 튀었다가 금방 잦아든다
+  let rec = null;                          // 영상을 만드는 중이면 그 녹화 판(startRec 참고)
+
+  const say = (t, err) => { ui.status.textContent = t; ui.status.classList.toggle('err', !!err); };
+  let LANG = 'ko';                         // 화면 언어 — 'ko' · 'en'(영상 속 가짜 바탕화면 글자도 따른다)
+  const L = (ko, en) => LANG === 'en' ? en : ko;
+  const isLive = () => mode === 'tab' || mode === 'screen';
+  const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
+  const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+  const lum = hex => { const n = parseInt(hex.slice(1), 16), f = c => { c /= 255; return c <= .04045 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); };
+    return .2126 * f(n >> 16 & 255) + .7152 * f(n >> 8 & 255) + .0722 * f(n & 255); };
+
+  /* ══ 움직임 — 모두 「움직임 시계 mt」 하나로 정한다. mt = 0 이면 모두 맨 바깥(전체 화면)에 멈춘 모습 ══ */
+  const MOTIONS = [                        // [값, 이름, English, 설명, English]
+    ['unfold', '펼쳐지는 화면', 'Unfolding screens', '전체 화면을 공유했을 때처럼 화면 안에 화면이 한 겹씩 늦게 비치며 펼쳐집니다. 겹마다 조금 전 모습이라 테두리가 떠다니면 터널이 뱀처럼 휘어 따라옵니다(테두리를 끌어 보세요). 끝까지 들어갔다가 다시 맨 앞 전체 화면으로 나온 뒤, 접혔다가 다시 펼쳐집니다.',
+      'Like sharing your whole screen: screens unfold inside the screen, each one a moment late. Every layer shows a slightly earlier moment, so as the frame drifts the tunnel bends and follows like a snake (try dragging the frame). It goes all the way in, comes back out to the full screen at the front, then folds up and unfolds again.'],
+    ['in', '빨려 들기', 'Dive in', '끝없이 안으로 빨려 들어갑니다.', 'Endlessly pulled inward.'],
+    ['dive', '들어갔다 나오기', 'In and back out', '점처럼 작던 곳까지 끝까지 들어갔다가, 다시 천천히 앞으로 나오며 전체 화면으로 돌아옵니다. 「깊이 그늘」 을 주면 깊이 갈수록 어두워집니다.',
+      'Goes all the way in to where it was as small as a dot, then slowly comes back out to the full screen. Add “Depth shade” to darken it the deeper it goes.'],
+    ['away', '멀어졌다 다가오기', 'Away and back', '화면 전체가 소용돌이의 눈 쪽으로 멀어져 점이 되었다가, 다시 다가와 전체 화면이 됩니다.',
+      'The whole screen recedes toward the eye of the swirl until it is a dot, then comes back to fill the screen.'],
+    ['out', '빠져나오기', 'Pull out', '안에서 바깥으로, 끝없이 빠져나옵니다.', 'Endlessly pulling outward.'],
+    ['twist', '소용돌이', 'Swirl', '빨려 들면서 소용돌이처럼 이리저리 비틀립니다.', 'Twists back and forth like a whirlpool while diving in.'],
+    ['still', '멈춤', 'Still', '움직이지 않고 겹겹이 비친 모습 그대로입니다(PNG 저장에 좋습니다).', 'No motion — just the nested reflections (good for Save PNG).'],
+  ];
+
+  /* ══ 꾸미기 설정 — 이 브라우저에 기억한다(이미지 · 음악 파일은 기억하지 않음) ══ */
+  const THEMES = [
+    { name: '밤바다', en: 'Night sea', bg1: '#13285A', bg2: '#091634', frame: '#5FE3FF', tcol: '#FFFFFF' },
+    { name: '노을', en: 'Sunset', bg1: '#FF8A5B', bg2: '#4A1D5E', frame: '#FFD166', tcol: '#FFFFFF' },
+    { name: '숲', en: 'Forest', bg1: '#2D6A4F', bg2: '#0B2418', frame: '#B7E4C7', tcol: '#FFFFFF' },
+    { name: '벚꽃', en: 'Cherry blossom', bg1: '#FFD6E0', bg2: '#F48FB1', frame: '#FFFFFF', tcol: '#7A1E48' },
+    { name: '보랏빛', en: 'Violet', bg1: '#6A3FA0', bg2: '#1C0B33', frame: '#E0AAFF', tcol: '#FFFFFF' },
+    { name: '모노톤', en: 'Mono', bg1: '#4A4A4A', bg2: '#0D0D0D', frame: '#FFFFFF', tcol: '#FFFFFF' },
+    { name: '네온', en: 'Neon', bg1: '#1A0533', bg2: '#000000', frame: '#FF2E88', tcol: '#3CF2FF' },
+  ];
+  const S0 = { motion: 'unfold', bg1: '#13285A', bg2: '#091634', frame: '#5FE3FF', tcol: '#FFFFFF', text: '', size: 7, pos: 'mid', fit: 'cover',
+    hue: 0, shade: 12, flow: false, rot: 0, spd: 1, flip: false, vol: .8, beat: true, len: '20', introUrl: '', introSec: 6, endUrl: '', endSec: 6,
+    lang: /^ko/i.test(navigator.language || '') ? 'ko' : 'en', trKeep: false };
+  const S = Object.assign({}, S0);
+  try { Object.assign(S, JSON.parse(localStorage.getItem('mirror-look') || '{}')); } catch (_) {}
+  (function fix() {                        // 기억해 둔 값이 망가져 있어도 그리기가 깨지지 않게
+    if (!MOTIONS.some(m => m[0] === S.motion)) S.motion = S0.motion;
+    for (const k of ['bg1', 'bg2', 'frame', 'tcol']) if (!/^#[0-9a-f]{6}$/i.test(S[k])) S[k] = S0[k];
+    for (const [k, a, b] of [['size', 2, 16], ['shade', 0, 50], ['hue', 0, 60], ['rot', -30, 30], ['spd', 0, 3], ['vol', 0, 1]])
+      S[k] = Number.isFinite(+S[k]) ? clamp(+S[k], a, b) : S0[k];
+    if (!['top', 'mid', 'bot'].includes(S.pos)) S.pos = S0.pos;
+    if (!['cover', 'contain'].includes(S.fit)) S.fit = S0.fit;
+    for (const k of ['flow', 'flip', 'beat']) S[k] = !!S[k];
+    S.text = typeof S.text === 'string' ? S.text.slice(0, 160) : '';
+    if (!['10', '20', '30', '60', 'song', 'manual'].includes(S.len)) S.len = S0.len;
+    for (const k of ['introUrl', 'endUrl']) S[k] = typeof S[k] === 'string' ? S[k].slice(0, 2000) : '';
+    for (const k of ['introSec', 'endSec']) S[k] = Number.isFinite(+S[k]) ? clamp(Math.round(+S[k]), 1, 60) : S0[k];
+    if (!['ko', 'en'].includes(S.lang)) S.lang = S0.lang;
+    S.trKeep = !!S.trKeep;
+  })();
+  LANG = S.lang;
+  let keepT = 0;
+  const keep = () => { clearTimeout(keepT); keepT = setTimeout(() => { try { localStorage.setItem('mirror-look', JSON.stringify(S)); } catch (_) {} }, 300); };
+  let INK = '#EAF1FF';                     // 가짜 바탕화면의 글자 색 — 밝은 바탕이면 어둡게
+  function look() {
+    INK = (lum(S.bg1) + lum(S.bg2)) / 2 > .35 ? '#1B2340' : '#EAF1FF';
+    sel.style.setProperty('--fc', S.frame);
+    document.querySelectorAll('#themes button').forEach((b, i) => { const th = THEMES[i];
+      b.classList.toggle('on', th.bg1 === S.bg1 && th.bg2 === S.bg2 && th.frame === S.frame && th.tcol === S.tcol); });
+  }
+
+  /* ── 조절 칸 묶기 ── */
+  const FMT = { spd: v => v.toFixed(1), rot: v => v + '°', size: v => String(v), hue: v => v + '°', shade: v => v + '%', vol: v => Math.round(v * 100) + '%' };
+  MOTIONS.forEach(([v, ko, en]) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.v = v; b.dataset.ko = ko; b.dataset.en = en; b.textContent = L(ko, en); $('motions').appendChild(b); });
+  function syncInputs() {
+    for (const k of Object.keys(FMT)) { $(k).value = S[k]; $(k + 'O').textContent = FMT[k](S[k]); }
+    for (const k of ['bg1', 'bg2', 'frame', 'tcol']) $(k).value = S[k];
+    for (const k of ['flow', 'flip', 'beat', 'trKeep']) $(k).checked = S[k];
+    $('txt').value = S.text;
+    document.querySelectorAll('[data-k]').forEach(g => g.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === S[g.dataset.k])));
+    { const m = MOTIONS.find(x => x[0] === S.motion); $('motionTip').textContent = L(m[3], m[4]); }
+    $('len').value = S.len; $('introSec').value = S.introSec; $('endSec').value = S.endSec;
+    for (const k of ['intro', 'end']) { const f = SEGF[k], el = $(k + 'Url'); el.readOnly = !!f; el.value = f ? L('파일: ', 'File: ') + f.name : S[k + 'Url']; }
+    paintLen();
+  }
+  for (const k of Object.keys(FMT)) $(k).addEventListener('input', e => { S[k] = +e.target.value; $(k + 'O').textContent = FMT[k](S[k]); if (k === 'vol') setVol(); keep(); });
+  for (const k of ['bg1', 'bg2', 'frame', 'tcol']) $(k).addEventListener('input', e => { S[k] = e.target.value; look(); keep(); });
+  for (const k of ['flow', 'flip', 'beat', 'trKeep']) $(k).addEventListener('change', e => { S[k] = e.target.checked; keep(); });
+  $('flip').addEventListener('change', () => { if (S.flip) say(L('좌우 뒤집기를 켜면 겹마다 거울처럼 뒤집혀서, 안으로 드나드는 움직임은 멈추고 소용돌이 · 멀어졌다 다가오기 · 펼쳐지는 화면의 펼침과 접힘만 움직입니다.',
+    'With Mirror flip on, every layer is mirrored, so the in/out motions stop — only Swirl, Away and back, and the unfolding and folding of Unfolding screens still move.')); });
+  $('txt').addEventListener('input', e => { S.text = e.target.value; keep(); });
+  document.querySelectorAll('[data-k]').forEach(g => g.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    S[g.dataset.k] = b.dataset.v; syncInputs(); keep();
+    if (g.dataset.k === 'motion') {                            // 고른 움직임은 맨 바깥(전체 화면)에서 새로 시작
+      mt = startMt(); holdUntil = performance.now() + 400;
+      if (isLive()) say(L('진짜 공유 중에는 공유된 화면이 그대로 비칩니다 — 움직임은 흉내 모드 · 내 이미지에서 보입니다.', 'While really sharing, the shared screen is shown as is — motions show in Simulated and My image.'));
+    }
+  }));
+  THEMES.forEach(th => {
+    const b = document.createElement('button'); b.type = 'button';
+    b.innerHTML = `<i style="background:linear-gradient(135deg,${th.bg1},${th.bg2});border-color:${th.frame}"></i><span data-ko="${th.name}" data-en="${th.en}">${L(th.name, th.en)}</span>`;
+    b.addEventListener('click', () => { Object.assign(S, { bg1: th.bg1, bg2: th.bg2, frame: th.frame, tcol: th.tcol }); syncInputs(); look(); keep(); });
+    $('themes').appendChild(b);
+  });
+
+  /* ── 크기 ── */
+  function resize() {
+    const r = cv.getBoundingClientRect();
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    const k = Math.max(DPR, Math.min(3, 1280 / Math.max(1, r.width)));   // 화면에 작게 보여도 1280 픽셀 폭으로 그린다 — 영상(1280×720)이 흐리지 않게
+    W = cv.width = Math.max(320, Math.round(r.width * k));
+    H = cv.height = Math.max(180, Math.round(r.height * k));
+    FF = getComputedStyle(document.body).fontFamily;
+    placeSel();
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { FF = getComputedStyle(document.body).fontFamily; });
+  new ResizeObserver(resize).observe(stage);
+
+  /* ── 파란 테두리(거울 자리 · 캡처 영역) ── */
+  function placeSel() {
+    sel.style.left = (R.x * 100) + '%'; sel.style.top = (R.y * 100) + '%';
+    sel.style.width = (R.w * 100) + '%'; sel.style.height = (R.h * 100) + '%';
+    const sr = stage.getBoundingClientRect(); let w = R.w * sr.width, h = R.h * sr.height, what = mode === 'photo' ? L('사진이 들어갈 자리', 'Where the picture goes') : L('거울 자리', 'Mirror spot');
+    if (isLive()) { what = L('캡처 영역', 'Capture area'); const c = liveCrop(); if (c) { w = c[2]; h = c[3]; } }
+    ui.selInfo.innerHTML = `${what}: <b>${Math.round(w)}×${Math.round(h)}px</b> ` + (isLive() ? L('(더블클릭하면 전체 화면)', '(double-click: full screen)') : L('(더블클릭하면 처음 자리)', '(double-click: reset)'));
+  }
+  let drag = null;
+  const rel = e => { const r = stage.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+  const maxR = () => isLive() ? 1 : .9;    // 흉내 · 이미지는 화면 전체를 덮으면 겹이 줄지 않아 끝없이 같은 그림만 쌓인다
+  stage.addEventListener('pointerdown', e => {
+    if (e.button) return;
+    const [x, y] = rel(e);
+    const kind = e.target.tagName === 'I' ? 'size' : e.target === sel ? 'move' : 'draw';
+    drag = { kind, x0: x, y0: y, r0: Object.assign({}, R) };
+    holdUntil = Infinity; mt = 0; sel.classList.remove('ghost');   // 만지는 동안은 맨 바깥 겹에 맞춰 멈춘다
+    frameTouch++;
+    stage.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  stage.addEventListener('pointermove', e => {
+    const [x, y] = rel(e);
+    ptr = [x * W, y * H];
+    if (!drag) return;
+    const dx = x - drag.x0, dy = y - drag.y0, r0 = drag.r0, m = maxR();
+    if (drag.kind === 'move') { R.x = clamp(r0.x + dx, 0, 1 - r0.w); R.y = clamp(r0.y + dy, 0, 1 - r0.h); }
+    else if (drag.kind === 'size') { R.w = clamp(r0.w + dx, .04, Math.min(m, 1 - r0.x)); R.h = clamp(r0.h + dy, .04, Math.min(m, 1 - r0.y)); }
+    else {                                                     // 빈 곳을 끌어 새로 그리기 — 한 번 누르기만 하면(조금도 안 끌면) 그대로 둔다
+      if (Math.abs(dx) < .015 && Math.abs(dy) < .015) return;
+      R.x = clamp(Math.min(drag.x0, x), 0, .96); R.y = clamp(Math.min(drag.y0, y), 0, .96);
+      R.w = clamp(Math.abs(dx), .04, Math.min(m, 1 - R.x)); R.h = clamp(Math.abs(dy), .04, Math.min(m, 1 - R.y));
+    }
+    placeSel();
+  });
+  const endDrag = () => { if (drag) holdUntil = performance.now() + 1500; drag = null; };
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) stage.addEventListener(ev, endDrag);
+  stage.addEventListener('pointerleave', () => { if (!drag) ptr = null; });
+  stage.addEventListener('dblclick', () => resetSel());
+  function resetSel() { Object.assign(R, isLive() ? { x: 0, y: 0, w: 1, h: 1 } : DEF); mt = 0; placeSel(); }
+  $('resetBtn').addEventListener('click', resetSel);
+
+  /* ══ 흉내 모드 · 내 이미지 — 화면이 자기 안에 비치는 모양을 겹겹이 계산해 그린다 ══
+     거울 지도 A: 화면 전체 → 파란 테두리 자리(그 가운데를 축으로 회전).
+     겹 k 의 화면 = A 를 k 번. 겹마다 바탕을 새로 그려서 아무리 들어가도 또렷하다.
+     깊이 D 만큼 들어간 모습 = 지도 A 의 고정점(소용돌이의 눈)을 향해 D 겹 다가간 것. 한 겹 들어가면 처음 모양과 같아 끊김이 없다 */
+  const ease = u => .5 - .5 * Math.cos(Math.PI * clamp(u, 0, 1));   // 천천히 → 빠르게 → 천천히
+  function cyc(t, parts) {                 // [[길이(초), 시작값, 끝값], ...] 를 되풀이
+    const T = parts.reduce((s, p) => s + p[0], 0); let x = t % T;
+    for (const [len, a, b] of parts) { if (x <= len) return a + (b - a) * ease(x / len); x -= len; }
+    return parts[parts.length - 1][2];
+  }
+  /* 움직임 시계 → 모습: D 들어간 깊이(겹) · c 화면 전체 크기(1 = 꽉) · tw 더 비트는 각도 · abs 깊이를 절대값으로(깊이 갈수록 그늘 · 색이 쌓임) */
+  const LAG = .12;                         // 펼쳐지는 화면 — 겹 하나가 늦게 비치는 시간(초). 진짜 화면 공유의 캡처 지연쯤
+  const UNF_START = 16.6;                  // 펼쳐지는 화면 한 바퀴(19초) 중 「펼치기」 가 시작되는 때 — 고르면 여기서부터
+  const startMt = () => S.motion === 'unfold' && !RM && S.spd >= .05 ? UNF_START : 0;
+  function pose(t) {
+    const P = { D: 0, c: 1, tw: 0, abs: false, base: 0, chain: false, born: 1, mt: t };
+    const turn = a => { P.base = Math.floor(a); P.D = a - P.base; };   // base — 지나온 겹 수(이미지가 여러 장이면 몇 번째 사진이 맨 앞인지)
+    if (S.motion === 'in') turn(t * .22);
+    else if (S.motion === 'out') turn(-t * .22);
+    else if (S.motion === 'twist') { turn(t * .22); P.tw = 16 * Math.sin(t * .8); }
+    else if (S.motion === 'dive') {                            // 화면 폭의 1% 로 보이던 겹(= 거의 점)까지 들어갔다가 돌아 나온다
+      const s = Math.sqrt(R.w * R.h), deep = clamp(Math.log(.01) / Math.log(s), 2, 24);
+      P.D = deep * cyc(t, [[1, 0, 0], [5.5, 0, 1], [.8, 1, 1], [5.5, 1, 0]]); P.abs = true;
+    } else if (S.motion === 'away')                            // 1 → 1.5% 로(로그 눈금이라 멀어지는 빠르기가 고르다)
+      P.c = Math.exp(Math.log(.015) * cyc(t, [[1, 0, 0], [4.5, 0, 1], [.6, 1, 1], [4.5, 1, 0]]));
+    else if (S.motion === 'unfold') {                          // 맨 앞 → 끝(화면 폭의 0.5%)까지 → 다시 맨 앞 전체 화면 → 접혔다가 → 펼쳐짐
+      const s = Math.sqrt(R.w * R.h), deep = clamp(Math.log(.005) / Math.log(s), 2, 24);
+      P.D = deep * cyc(t, [[1, 0, 0], [6, 0, 1], [.8, 1, 1], [6, 1, 0], [1, 0, 0], [1.4, 0, 0], [.4, 0, 0], [2.4, 0, 0]]);
+      P.born = cyc(t, [[1, 1, 1], [6, 1, 1], [.8, 1, 1], [6, 1, 1], [1, 1, 1], [1.4, 1, 0], [.4, 0, 0], [2.4, 0, 1]]);
+      P.abs = P.chain = true;
+    }
+    if (S.flip) { P.D = 0; P.base = 0; }                       // 뒤집기는 겹마다 거울상이 바뀌어 반 겹씩 이어 붙일 수 없다
+    return P;
+  }
+  function mirrorMap(rot, F = R) {
+    const rw = F.w * W, rh = F.h * H, cxr = F.x * W + rw / 2, cyr = F.y * H + rh / 2, sx = rw / W, sy = rh / H;
+    return new DOMMatrix().translate(cxr, cyr).rotate(rot).scale(S.flip ? -sx : sx, sy).translate(-W / 2, -H / 2);
+  }
+  function fixedPoint(A) {      // x = A x  →  (I - L) x = t
+    const a = 1 - A.a, b = -A.c, c = -A.b, d = 1 - A.d, det = a * d - b * c;
+    if (Math.abs(det) < 1e-9) return [W / 2, H / 2];
+    return [(d * A.e - b * A.f) / det, (-c * A.e + a * A.f) / det];
+  }
+  function zoomView(A, p, rot) {           // 0 → 화면 전체, 1 → 한 겹 안(= A 의 역)
+    if (!p) return new DOMMatrix();
+    const [fx, fy] = fixedPoint(A), sx = Math.hypot(A.a, A.b), sy = Math.hypot(A.c, A.d);
+    return new DOMMatrix().translate(fx, fy).scale(Math.pow(sx, -p), Math.pow(sy, -p)).rotate(-rot * p).translate(-fx, -fy);
+  }
+  const hueAt = (t, q) => (S.flow ? t / 1000 * 40 : 0) + S.hue * q;   // 겹이 깊을수록 · 시간이 갈수록 색이 돈다
+  /* 펼쳐지는 화면 — 진짜 화면 공유처럼 겹 k 는 k×LAG 초 전의 모습이다. 테두리 자리도 그때 것(끌어 옮긴 자취 RH · 저절로 떠다니기)이라
+     테두리가 움직이면 안쪽 겹들이 차례로 늦게 따라와 터널이 뱀처럼 휜다. 겹마다 지도가 달라서 정수 겹을 건너뛰지 않고 맨 앞부터 곱해 간다 */
+  const RH = [];                           // 테두리 자리 기록 [시각(ms), x, y, w, h]
+  function rAt(ms) { for (let i = RH.length - 1; i >= 0; i--) if (RH[i][0] <= ms) return RH[i]; return RH.length ? RH[0] : [0, R.x, R.y, R.w, R.h]; }
+  function drift(tau) {                    // 저절로 떠다니기 — 움직임 시계 0 에서는 제자리, 2.5초 동안 커진다
+    if (tau <= 0) return [0, 0, 0, 0];
+    const e = ease(tau / 2.5);
+    return [e * .07 * Math.sin(tau * .83), e * .055 * Math.sin(tau * 1.21), e * 6 * Math.sin(tau * .57), e * .05 * Math.sin(tau * 1.07)];
+  }
+  function chainMap(k, t, P) {             // 겹 k-1 안의 테두리(= 겹 k 가 들어가는 자리)
+    const h = rAt(t - (k - 1) * LAG * 1000), [dx, dy, dr, ds] = drift(P.mt - (k - 1) * LAG);
+    const w = h[3] * (1 + ds), hh = h[4] * (1 + ds);
+    const fr = { x: clamp(h[1] + h[3] / 2 + dx, w / 2, 1 - w / 2) - w / 2, y: clamp(h[2] + h[4] / 2 + dy, hh / 2, 1 - hh / 2) - hh / 2, w, h: hh };
+    const rot = S.rot + P.tw + dr;
+    return { A: mirrorMap(rot, fr), fr, rot };
+  }
+  function chainLayers(t, P) {
+    const n = Math.floor(P.D), p = P.D - n, G = [];
+    const g = k => G[k] || (G[k] = chainMap(k, t, P));
+    let M = zoomView(g(n + 1).A, p, g(n + 1).rot);          // 겹 n — 지금 화면을 거의 채우는 겹
+    const out = [];
+    if (n >= 1) out.push({ M: M.multiply(g(n).A.inverse()), q: n - 1 });   // 회전으로 빈 귀퉁이를 메우는 바깥 겹
+    out.push({ M, q: n });
+    for (let k = n + 1; k < n + 60; k++) {
+      M = M.multiply(g(k).A);
+      if (Math.sqrt(Math.abs(M.a * M.d - M.b * M.c)) * Math.max(W, H) < 3) break;
+      out.push({ M, q: k });
+    }
+    const nb = P.born * out[out.length - 1].q, Ls = [];       // 펼쳐진 겹 수 — 아직 안 비친 미리보기는 검다(진짜 공유가 막 시작될 때처럼)
+    for (const L of out) {
+      L.im = L.q; L.fr = g(L.q + 1).fr; L.a = L.q < 1 || P.born >= 1 ? 1 : clamp(nb - (L.q - 1), 0, 1);
+      Ls.push(L); if (!L.a) break;
+    }
+    return Ls;
+  }
+  function plainLayers(t, P) {
+    const rot = S.rot + P.tw, A = mirrorMap(rot), n = Math.floor(P.D), p = P.D - n;
+    let V = zoomView(A, p, rot);                               // 정수 겹은 그림이 같으니 남는 조각 p 만큼만 다가간다
+    if (P.c !== 1) { const [fx, fy] = fixedPoint(A); V = new DOMMatrix().translate(fx, fy).scale(P.c).translate(-fx, -fy).multiply(V); }
+    const off = P.abs ? n : -p, b0 = P.base + n, Ls = [];     // q = 그 겹의 깊이(겹 수). abs 면 맨 바깥 진짜 화면부터 센다. im = 몇 번째 사진
+    if (P.c < .999 && pics()) {                                // 내 이미지가 멀어질 때 — 둘레를 바깥 겹(같은 터널의 더 큰 겹) 그림으로 채워 전체 그림이 그대로 보이게
+      const Ai = A.inverse(); let M = V;
+      for (let m = 1; m <= 30; m++) { M = M.multiply(Ai); Ls.unshift({ M, q: off - m, im: b0 - m }); if (covers(M)) break; }
+    }
+    let M = V;
+    for (let k = 0; k < 40; k++) {
+      if (k) { M = M.multiply(A); if (Math.sqrt(Math.abs(M.a * M.d - M.b * M.c)) * Math.max(W, H) < 3) break; }   // 3px 보다 작아지면 그만
+      Ls.push({ M, q: k + off, im: b0 + k });
+    }
+    Ls.forEach(L => { L.a = 1; L.fr = R; });
+    Ls.A = A; Ls.V = V;
+    return Ls;
+  }
+  function covers(M) {                     // 이 겹이 캔버스를 다 덮는지(네 귀퉁이가 겹 안에)
+    const I = M.inverse();
+    return [[0, 0], [W, 0], [0, H], [W, H]].every(([x, y]) => { const q = I.transformPoint(new DOMPoint(x, y)); return q.x >= -1 && q.x <= W + 1 && q.y >= -1 && q.y <= H + 1; });
+  }
+  function drawLevels(t, P) {
+    const Ls = P.chain ? chainLayers(t, P) : plainLayers(t, P), pic = pics();
+    cx.setTransform(1, 0, 0, 1, 0, 0); cx.fillStyle = '#050A18'; cx.fillRect(0, 0, W, H);
+    if (P.c < .999 && !pic) {                                  // 흉내 모드가 멀어지는 동안 — 둘레에 바깥 겹들의 테두리를 옅게(터널 뼈대), 소용돌이의 눈엔 빛
+      const A = Ls.A, V = Ls.V, [fx, fy] = fixedPoint(A), far = 1 - P.c, gl = cx.createRadialGradient(fx, fy, 0, fx, fy, Math.max(W, H) * (.15 + .45 * far));
+      gl.addColorStop(0, rgba(S.frame, .26 * far)); gl.addColorStop(1, rgba(S.frame, 0));
+      cx.fillStyle = gl; cx.fillRect(0, 0, W, H);
+      const Ai = A.inverse(); let M = V;
+      for (let m = 1; m <= 14; m++) {
+        M = M.multiply(Ai);
+        const sc = Math.sqrt(Math.abs(M.a * M.d - M.b * M.c));
+        if (sc > 3) break;
+        cx.setTransform(M); cx.lineWidth = Math.max(1.5, W / 800) / sc; cx.strokeStyle = rgba(S.frame, .55 * Math.pow(.8, m - 1) * Math.min(1, far * 3));
+        cx.strokeRect(0, 0, W, H);
+      }
+      cx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    const shade = S.shade / 100, dim = q => shade > 0 && q > 0 ? Math.pow(1 - shade, q) : 1;
+    /* 겹마다 바탕(바깥 → 안). 깊을수록 색이 돌고 그늘이 진다 */
+    for (const L of Ls) {
+      const h = hueAt(t, L.q), b = dim(L.q);
+      cx.setTransform(L.M);
+      cx.save(); cx.beginPath(); cx.rect(0, 0, W, H); cx.clip();
+      if (L.a < 1) { cx.fillStyle = '#050A18'; cx.fillRect(0, 0, W, H); }   // 아직 비치지 않은 미리보기
+      if (L.a > 0) {
+        cx.globalAlpha = L.a;
+        cx.filter = Math.abs(h) > .05 ? `hue-rotate(${h.toFixed(1)}deg)` : 'none';
+        if (pic) drawPhoto(photoAt(L.im)); else drawDesktop(t, L.q);
+        cx.filter = 'none';
+        if (b < .999) { cx.fillStyle = `rgba(0,0,0,${(1 - b).toFixed(3)})`; cx.fillRect(0, 0, W, H); }
+      }
+      cx.restore();
+    }
+    /* 겹마다 맨 위에 뜨는 것(테두리 · 글자 · 공유 알림) — 안 → 바깥 순서로, 바깥 것이 위에.
+       글자는 그 겹 화면 안의 맨 위라 안쪽 화면에 가리지 않는다. 테두리는 그 겹 안의 미리보기 자리(fr) */
+    const lw = Math.max(2, W / 600) * (1 + 1.4 * bump), cap = !!S.text.trim();
+    for (let i = Ls.length - 1; i >= 0; i--) {
+      const L = Ls[i]; if (!L.a) continue;
+      const M = L.M, F = L.fr, h = hueAt(t, L.q), b = dim(L.q), hf = Math.abs(h) > .05 ? `hue-rotate(${h.toFixed(1)}deg)` : '';
+      cx.setTransform(M); cx.globalAlpha = L.a;
+      cx.filter = hf || 'none';
+      cx.lineWidth = lw; cx.strokeStyle = S.frame;
+      cx.strokeRect(F.x * W + lw / 2, F.y * H + lw / 2, F.w * W - lw, F.h * H - lw);
+      if (cap || mode === 'sim') {
+        cx.save(); cx.beginPath(); cx.rect(0, 0, W, H); cx.clip();
+        cx.filter = (hf + (b < .999 ? ` brightness(${b.toFixed(3)})` : '')).trim() || 'none';
+        if (cap) drawCaption(Math.sqrt(Math.abs(M.a * M.d - M.b * M.c)));
+        if (mode === 'sim') shareBar();
+        cx.restore();
+      }
+      cx.filter = 'none'; cx.globalAlpha = 1;
+    }
+    cx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  /* 가짜 바탕화면 — 창 하나 · 작업 표시줄 · 시계 · 커서. lag(겹 깊이)만큼 늦은 모습을 그려 겹마다 시간이 조금씩 밀린다 */
+  function drawDesktop(t, lag) {
+    const g = cx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, S.bg1); g.addColorStop(1, S.bg2);
+    cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+    const u = W / 100, light = INK !== '#EAF1FF', A0 = cx.globalAlpha;   // A0 — 막 펼쳐지는 겹은 반투명
+    /* 창 */
+    const wx = 3 * u, wy = 3 * u, ww = W - 6 * u, wh = H - 3 * u - 7.2 * u;
+    rr(wx, wy, ww, wh, 1.2 * u, light ? 'rgba(255,255,255,.32)' : 'rgba(0,0,0,.24)', light ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.16)');
+    cx.fillStyle = light ? 'rgba(255,255,255,.38)' : 'rgba(0,0,0,.2)'; rrPath(wx, wy, ww, 3.4 * u, [1.2 * u, 1.2 * u, 0, 0]); cx.fill();
+    ['#FF5F57', '#FEBC2E', '#28C840'].forEach((c, i) => { cx.fillStyle = c; cx.beginPath(); cx.arc(wx + (2 + i * 1.8) * u, wy + 1.7 * u, .55 * u, 0, 7); cx.fill(); });
+    rr(wx + 8 * u, wy + .75 * u, 30 * u, 1.9 * u, .95 * u, light ? 'rgba(0,0,0,.07)' : 'rgba(255,255,255,.08)');
+    cx.globalAlpha = A0 * .72; cx.fillStyle = INK; cx.font = `${1.15 * u}px ${FF}`; cx.textBaseline = 'middle';
+    cx.fillText(L('무한 거울 — 화면 공유 터널', 'Infinite Mirror — screen share tunnel'), wx + 9.2 * u, wy + 1.72 * u);
+    /* 창 안 — 제목과 글줄 몇 개(겹 안에서도 무엇인지 보이게) */
+    cx.globalAlpha = A0; cx.font = `800 ${3 * u}px ${FF}`; cx.fillText(L('무한 거울', 'Infinite Mirror'), wx + 3 * u, wy + 8 * u);
+    cx.globalAlpha = A0 * .32;
+    for (let i = 0; i < 6; i++) { rrPath(wx + 3 * u, wy + (11.5 + i * 2.6) * u, (34 - (i % 3) * 7) * u, .9 * u, .45 * u); cx.fill(); }
+    cx.globalAlpha = A0;
+    /* 움직이는 것 — 혜성 하나가 창 안을 돈다(겹마다 늦게) */
+    const tt = t / 1000 - lag * .12;
+    const ox = wx + 22 * u + Math.cos(tt * 1.1) * 15 * u, oy = wy + 34 * u + Math.sin(tt * 1.6) * 9 * u;
+    const cg = cx.createRadialGradient(ox, oy, 0, ox, oy, 3 * u); cg.addColorStop(0, rgba(S.frame, .95)); cg.addColorStop(1, rgba(S.frame, 0));
+    cx.fillStyle = cg; cx.beginPath(); cx.arc(ox, oy, 3 * u, 0, 7); cx.fill();
+    /* 작업 표시줄 */
+    const ty = H - 6 * u;
+    cx.fillStyle = 'rgba(0,0,0,.42)'; cx.fillRect(0, ty, W, 6 * u);
+    const icons = ['#E5484D', '#F5D90A', '#3E9BFF', '#30A46C', '#8E4EC6', '#F76B15', '#0091FF'];
+    icons.forEach((c, i) => { rr(W / 2 + (i - icons.length / 2) * 4 * u, ty + 1.5 * u, 3 * u, 3 * u, .8 * u, c); });
+    const d = new Date(Date.now() - lag * 120);
+    cx.fillStyle = '#FFFFFF'; cx.font = `${1.25 * u}px ${FF}`; cx.textAlign = 'right';
+    cx.fillText(d.toLocaleTimeString(LANG === 'en' ? 'en-US' : 'ko-KR', { hour: 'numeric', minute: '2-digit', second: '2-digit' }), W - 2 * u, ty + 2.2 * u);
+    cx.globalAlpha = A0 * .7; cx.fillText(d.toLocaleDateString('sv-SE'), W - 2 * u, ty + 4 * u);
+    cx.globalAlpha = A0; cx.textAlign = 'left';
+    /* 커서 — 겹이 깊을수록 예전 자리 */
+    const back = Math.min(trail.length - 1, Math.round(Math.max(0, lag) * 4));
+    const pos = back >= 0 ? trail[trail.length - 1 - back] : null;
+    if (pos) arrow(pos[0], pos[1], 2.4 * u);
+  }
+  function shareBar() {                     // 공유 알림 줄 — 글 길이(언어)에 맞춰 폭을 잡는다
+    const u = W / 100, bh = 3.6 * u;
+    cx.font = `${1.25 * u}px ${FF}`; cx.textBaseline = 'middle';
+    const msg = L('Ⅱ  이 화면을 공유하고 있습니다.', 'Ⅱ  You are sharing this screen.'), stop = L('공유 중지', 'Stop sharing'), hide = L('숨기기', 'Hide');
+    const mw = cx.measureText(msg).width, sw = cx.measureText(stop).width + 2 * u, hw = cx.measureText(hide).width;
+    const bw = Math.max(44 * u, mw + sw + hw + 7.8 * u), bx = (W - bw) / 2, by = H - 6 * u - bh - 1.2 * u;
+    rr(bx, by, bw, bh, .9 * u, 'rgba(18,22,34,.93)');
+    cx.fillStyle = '#EAF1FF'; cx.fillText(msg, bx + 1.6 * u, by + bh / 2);
+    const hx = bx + bw - 1.6 * u - hw, px = hx - 1.6 * u - sw;
+    rr(px, by + .6 * u, sw, bh - 1.2 * u, .7 * u, '#EAF1FF');
+    cx.fillStyle = '#0B1836'; cx.fillText(stop, px + u, by + bh / 2);
+    cx.fillStyle = '#8FB8FF'; cx.fillText(hide, hx, by + bh / 2);
+  }
+  function drawPhoto(photo) {
+    const iw = photo.naturalWidth || photo.width, ih = photo.naturalHeight || photo.height;
+    if (S.fit === 'contain') {                // 다 보이게 — 남는 곳은 바탕 색
+      const g = cx.createLinearGradient(0, 0, W, H); g.addColorStop(0, S.bg1); g.addColorStop(1, S.bg2);
+      cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+    }
+    const s = S.fit === 'contain' ? Math.min(W / iw, H / ih) : Math.max(W / iw, H / ih);
+    cx.drawImage(photo, (W - iw * s) / 2, (H - ih * s) / 2, iw * s, ih * s);
+  }
+  /* 글자 — 화면에 쓴 글이라 겹마다 함께 들어간다. 그림자 크기는 겹 크기(ks)에 맞춘다(캔버스 그림자는 변환을 따르지 않음) */
+  function drawCaption(ks) {
+    const lines = S.text.split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 4);
+    if (!lines.length) return;
+    const u = W / 100, fs = S.size * u * (1 + .07 * bump), lh = fs * 1.22, tot = lh * lines.length;
+    const y0 = S.pos === 'top' ? H * .13 : S.pos === 'bot' ? H * .8 - tot : (H - tot) / 2;
+    cx.save();
+    cx.font = `800 ${fs.toFixed(1)}px ${FF}`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.shadowColor = 'rgba(0,0,0,.5)'; cx.shadowBlur = fs * .2 * ks; cx.shadowOffsetY = fs * .05 * ks;
+    cx.fillStyle = S.tcol;
+    lines.forEach((l, i) => cx.fillText(l, W / 2, y0 + lh * (i + .5), W * .9));
+    cx.restore();
+  }
+  function rrPath(x, y, w, h, r) { cx.beginPath(); cx.roundRect ? cx.roundRect(x, y, w, h, r) : cx.rect(x, y, w, h); }
+  function rr(x, y, w, h, r, fill, stroke) { rrPath(x, y, w, h, r); if (fill) { cx.fillStyle = fill; cx.fill(); } if (stroke) { cx.strokeStyle = stroke; cx.lineWidth = Math.max(1, W / 1200); cx.stroke(); } }
+  function arrow(x, y, s) {
+    cx.save(); cx.translate(x, y); cx.scale(s / 24, s / 24);
+    cx.beginPath(); cx.moveTo(0, 0); cx.lineTo(0, 22); cx.lineTo(6, 16.5); cx.lineTo(10, 25); cx.lineTo(13.5, 23.5); cx.lineTo(9.6, 15); cx.lineTo(17, 15); cx.closePath();
+    cx.fillStyle = '#fff'; cx.fill(); cx.lineWidth = 1.6; cx.strokeStyle = '#0B1836'; cx.stroke(); cx.restore();
+  }
+
+  /* ══ 진짜 화면 공유 — 공유된 화면을 그대로 비춘다. 이 창이 그 화면 안에 있으니 비친 것이 또 비친다 ══
+     회전 · 색 돌리기 · 뒤집기 · 글자는 비칠 때마다 한 번씩 더해져 소용돌이 · 무지개 · 거울 무늬가 된다 */
+  function drawLive(t) {
+    cx.setTransform(1, 0, 0, 1, 0, 0); cx.fillStyle = '#050A18'; cx.fillRect(0, 0, W, H);
+    if (!video || video.readyState < 2) return;
+    const vw = video.videoWidth, vh = video.videoHeight, s = Math.min(W / vw, H / vh), dw = vw * s, dh = vh * s, h = hueAt(t, 1);
+    liveBox = { x: (W - dw) / 2, y: (H - dh) / 2, s };
+    cx.save(); cx.translate(W / 2, H / 2); cx.rotate(S.rot * Math.PI / 180); if (S.flip) cx.scale(-1, 1);
+    cx.filter = Math.abs(h) > .05 ? `hue-rotate(${h.toFixed(1)}deg)` : 'none';
+    cx.drawImage(video, -dw / 2, -dh / 2, dw, dh);
+    cx.restore();
+    drawCaption(1);
+  }
+  /* 캡처 영역(파란 테두리)을 공유 영상의 픽셀 좌표로 — 영상은 캔버스에 가운데 맞춰 들어가 있다(위아래 · 좌우 빈 띠) */
+  function liveCrop() {
+    if (!isLive() || !video || !video.videoWidth || !liveBox) return null;
+    const vw = video.videoWidth, vh = video.videoHeight, b = liveBox;
+    const x0 = clamp((R.x * W - b.x) / b.s, 0, vw), y0 = clamp((R.y * H - b.y) / b.s, 0, vh);
+    const x1 = clamp(((R.x + R.w) * W - b.x) / b.s, 0, vw), y1 = clamp(((R.y + R.h) * H - b.y) / b.s, 0, vh);
+    return x1 - x0 >= 1 && y1 - y0 >= 1 ? [x0, y0, x1 - x0, y1 - y0] : null;
+  }
+  async function startLive(kind) {
+    const fail = msg => { setMode('sim'); say(msg, true); };
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return fail(L('이 브라우저는 화면 공유를 지원하지 않습니다 — 크롬이나 엣지에서 열어 보세요(파일로 열거나 localhost 에서).', 'This browser doesn’t support screen sharing — open it in Chrome or Edge (as a file or on localhost).'));
+    const pp = document.permissionsPolicy || document.featurePolicy;
+    if (pp && pp.allowsFeature && !pp.allowsFeature('display-capture')) return fail(L('이 페이지가 다른 페이지 안에 들어 있어 화면 공유가 막혀 있습니다 — 파일을 크롬에서 바로 여세요. 흉내 모드 · 내 이미지는 여기서도 됩니다.', 'This page is inside another page, so screen sharing is blocked — open the file directly in Chrome. Simulated and My image still work here.'));
+    stopLive(true);
+    const opt = kind === 'tab'
+      ? { video: { frameRate: 30 }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude' }
+      : { video: { displaySurface: 'monitor', frameRate: 30 }, audio: false, selfBrowserSurface: 'include', monitorTypeSurfaces: 'include' };
+    try {
+      stream = await navigator.mediaDevices.getDisplayMedia(opt);
+    } catch (e) {
+      const m = (e && e.message) || String(e);
+      return fail(e && e.name === 'NotAllowedError' && !/policy/i.test(m) ? L('공유를 취소했습니다. 다시 누르면 고를 수 있습니다.', 'Sharing was cancelled. Press again to choose.') : L('화면을 공유하지 못했습니다 — ', 'Couldn’t share the screen — ') + m);
+    }
+    video = document.createElement('video'); video.muted = true; video.playsInline = true; video.srcObject = stream;
+    await video.play().catch(() => {});
+    const tr = stream.getVideoTracks()[0];
+    tr.addEventListener('ended', () => { if (stream) { stopLive(); say(L('공유가 끝났습니다. 다시 하려면 공유 단추를 누르세요.', 'Sharing ended. Press a share button to start again.')); } });
+    mode = kind; stage.classList.add('live'); $('stopBtn').hidden = false; paintModes(); resetSel();
+    const surf = (tr.getSettings && tr.getSettings().displaySurface) || '';
+    say(surf === 'browser' ? L('이 탭을 공유하는 중 — 미리보기 안에 이 탭이, 그 안에 또 이 탭이 끝없이 들어갑니다. 회전이나 색 돌리기를 조금 줘 보세요.', 'Sharing this tab — the tab appears inside the preview, and again inside that, forever. Try a little rotation or hue shift.')
+      : L('공유하는 중 — 이 창이 공유되는 화면 안에 보이면 미리보기가 자기를 다시 비춥니다. 창이 가려지면 끊깁니다.', 'Sharing — while this window is visible on the shared screen, the preview reflects itself. It breaks if the window is covered.'));
+  }
+  function stopLive(quiet) {
+    if (stream) { const s = stream; stream = null; s.getTracks().forEach(t => t.stop()); }
+    if (video) { video.srcObject = null; video = null; }
+    stage.classList.remove('live'); $('stopBtn').hidden = true;
+    if (!quiet && isLive()) setMode('sim');
+  }
+  $('stopBtn').addEventListener('click', () => { stopLive(); say(L('공유를 멈췄습니다.', 'Sharing stopped.')); });
+
+  /* ── 내 이미지 — 여러 장이면 1번 사진의 테두리 자리에 2번, 그 안에 3번 … 마지막 다음은 다시 1번. 큰 사진은 한 번 줄여 둔다(움직이는 GIF 는 그대로) ── */
+  const MAXP = 20;
+  const pics = () => mode === 'photo' && photos.length > 0;
+  const photoAt = i => photos[((i % photos.length) + photos.length) % photos.length].img;
+  function loadPic(file) {
+    return new Promise((ok, no) => {
+      const url = URL.createObjectURL(file), img = new Image(), gif = /gif/i.test(file.type);
+      img.onload = () => {
+        const iw = img.naturalWidth, ih = img.naturalHeight; let p = img;
+        if (!gif) {
+          const k = Math.min(1, 1920 / Math.max(iw, ih)), c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(iw * k)); c.height = Math.max(1, Math.round(ih * k));
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); p = c; URL.revokeObjectURL(url);
+        }
+        const th = document.createElement('canvas'), s = Math.max(160 / iw, 90 / ih);   // 작은 그림(순서 바꾸기용)
+        th.width = 160; th.height = 90; th.getContext('2d').drawImage(img, (160 - iw * s) / 2, (90 - ih * s) / 2, iw * s, ih * s);
+        ok({ img: p, gif: gif ? url : null, name: file.name, th });
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); no(new Error(file.name)); };
+      img.src = url;
+    });
+  }
+  async function addPhotos(files) {
+    const list = [...files].filter(f => f && /^image\//.test(f.type)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    if (!list.length) return;
+    let bad = 0, over = 0;
+    for (const f of list) {
+      if (photos.length >= MAXP) { over++; continue; }
+      try { photos.push(await loadPic(f)); } catch (_) { bad++; }
+    }
+    paintThumbs();
+    if (!photos.length) return say(L('이미지를 읽지 못했습니다 — jpg · png · gif · webp 를 써 보세요(아이폰 HEIC 는 크롬이 못 엽니다).', 'Couldn’t read the image — try jpg · png · gif · webp (Chrome can’t open iPhone HEIC).'), true);
+    if (mode !== 'photo') { stopLive(true); mode = 'photo'; paintModes(); resetSel(); mt = startMt(); }
+    const n = photos.length;
+    say((n === 1 ? L('사진 안의 테두리 자리에 같은 사진이 끝없이 들어갑니다. 테두리를 옮기면 소용돌이의 눈이 바뀝니다. 여러 장을 넣으면 차례로 이어집니다.', 'The same picture goes endlessly into the frame inside it. Move the frame to change the eye of the swirl. Add more images and they follow one another.')
+      : L(`사진 ${n}장 — 1번 사진의 테두리 자리에 2번, 그 안에 3번 … 마지막 다음은 다시 1번으로 끝없이 이어집니다. 작은 그림을 끌어 순서를 바꿀 수 있습니다.`, `${n} images — #2 goes into the frame of #1, #3 into #2 … and after the last comes #1 again, endlessly. Drag the thumbnails to reorder.`))
+      + (bad ? L(` (${bad}장은 읽지 못했습니다 — 아이폰 HEIC 는 크롬이 못 엽니다)`, ` (${bad} couldn’t be read — Chrome can’t open iPhone HEIC)`) : '')
+      + (over ? L(` (${MAXP}장까지만 넣었습니다)`, ` (only up to ${MAXP} images)`) : ''), !!bad);
+  }
+  function dropPhoto(i) { const [p] = photos.splice(i, 1); if (p && p.gif) URL.revokeObjectURL(p.gif); }
+  function paintThumbs() {
+    const box = $('thumbs'); box.textContent = '';
+    photos.forEach((p, i) => {
+      const d = document.createElement('div'); d.className = 'thumb'; d.draggable = true; d.dataset.i = i; d.title = p.name;
+      const b = document.createElement('b'); b.textContent = i + 1;
+      const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', L(`${i + 1}번 빼기`, `Remove #${i + 1}`));
+      d.append(p.th, b, x); box.appendChild(d);
+    });
+    box.hidden = !photos.length; $('imgOff').hidden = !photos.length;
+    $('imgName').textContent = !photos.length ? '' : photos.length === 1 ? photos[0].name : L(`${photos.length}장 · 1번이 맨 앞`, `${photos.length} images · #1 in front`);
+  }
+  let thumbFrom = -1;                      // 작은 그림 끌어 순서 바꾸기
+  $('thumbs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; dropPhoto(+b.parentElement.dataset.i); paintThumbs(); if (!photos.length && mode === 'photo') setMode('sim'); });
+  $('thumbs').addEventListener('dragstart', e => { const d = e.target.closest('.thumb'); if (!d) return; thumbFrom = +d.dataset.i; d.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(thumbFrom)); });
+  $('thumbs').addEventListener('dragover', e => { const d = e.target.closest('.thumb'); if (thumbFrom < 0 || !d) return; e.preventDefault(); document.querySelectorAll('.thumb.over').forEach(x => x.classList.remove('over')); d.classList.add('over'); });
+  $('thumbs').addEventListener('drop', e => { const d = e.target.closest('.thumb'); if (thumbFrom < 0 || !d) return; e.preventDefault(); e.stopPropagation(); const [p] = photos.splice(thumbFrom, 1); photos.splice(+d.dataset.i, 0, p); thumbFrom = -1; paintThumbs(); });
+  $('thumbs').addEventListener('dragend', () => { thumbFrom = -1; paintThumbs(); });
+  $('imgBtn').addEventListener('click', () => $('imgFile').click());
+  $('imgFile').addEventListener('change', e => { addPhotos(e.target.files || []); e.target.value = ''; });
+  $('imgOff').addEventListener('click', () => { while (photos.length) dropPhoto(0); paintThumbs(); if (mode === 'photo') setMode('sim'); });
+  document.addEventListener('paste', e => {
+    const it = [...((e.clipboardData && e.clipboardData.items) || [])].find(i => /^image\//.test(i.type));
+    if (it) addPhotos([it.getAsFile()]);
+  });
+
+  /* ══ 음악 — 내가 고른 파일만, 반복 재생. 소리를 갈래로 나눠 ① 스피커 ② 박자 읽기(150Hz 아래만) ③ 영상 녹음 으로 보낸다 ══ */
+  const AUD = /\.(mp3|m4a|aac|wav|ogg|oga|flac|opus|weba)$/i;
+  const audio = new Audio(); audio.loop = true; audio.preload = 'auto';
+  let musURL = null, actx = null, an = null, tbuf = null, outG = null, recG = null, recDest = null, bAvg = 0, lastHit = -1;
+  function ctx() {                          // 소리 판 — 음악과 탭 소리 녹음이 함께 쓴다
+    if (actx) return actx;
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    try { actx = new AC(); recDest = actx.createMediaStreamDestination(); } catch (_) { actx = null; }
+    return actx;
+  }
+  function audioGraph() {
+    if (outG || !ctx()) return;
+    try {
+      const src = actx.createMediaElementSource(audio);
+      outG = actx.createGain(); recG = actx.createGain(); recG.gain.value = 0;
+      src.connect(outG); outG.connect(actx.destination);                   // 스피커(소리 크기는 여기서만)
+      src.connect(recG); recG.connect(recDest);                            // 녹음(소리 크기와 상관없이 제 크기로)
+      const lp = actx.createBiquadFilter(), mute = actx.createGain();      // 박자 읽기 — 북 · 베이스만 남겨 세기를 잰다(듣는 소리엔 안 섞임)
+      lp.type = 'lowpass'; lp.frequency.value = 150; lp.Q.value = .7; mute.gain.value = 0;
+      an = actx.createAnalyser(); an.fftSize = 1024; tbuf = new Float32Array(an.fftSize);
+      src.connect(lp); lp.connect(an); an.connect(mute); mute.connect(actx.destination);
+      setVol();
+    } catch (_) { outG = null; }
+  }
+  function setVol() { if (outG) { outG.gain.cancelScheduledValues(actx.currentTime); outG.gain.value = S.vol; } else audio.volume = S.vol; }
+  function useMusic(file) {
+    if (!file || !(/^audio\//.test(file.type) || AUD.test(file.name))) return;
+    if (musURL) URL.revokeObjectURL(musURL);
+    musURL = URL.createObjectURL(file); audio.src = musURL;
+    $('musName').textContent = file.name; $('playBtn').hidden = false;
+    audioGraph(); setVol(); playMusic();
+  }
+  async function playMusic() {
+    if (!musURL) return;
+    try { if (actx && actx.state !== 'running') await actx.resume(); await audio.play(); }
+    catch (e) { say(L('음악을 틀지 못했습니다 — 「재생」 을 눌러 보세요.', 'Couldn’t play the music — press “Play”.'), true); }
+  }
+  const paintPlay = () => { $('playBtn').textContent = audio.paused ? L('재생', 'Play') : L('멈춤', 'Pause'); };
+  audio.addEventListener('play', paintPlay); audio.addEventListener('pause', paintPlay);
+  audio.addEventListener('error', () => { if (musURL) say(L('이 음악 파일은 열 수 없습니다 — mp3 · m4a · wav 를 써 보세요.', 'This music file can’t be opened — try mp3 · m4a · wav.'), true); });
+  $('musBtn').addEventListener('click', () => $('musFile').click());
+  $('musFile').addEventListener('change', e => { useMusic(e.target.files && e.target.files[0]); e.target.value = ''; });
+  $('playBtn').addEventListener('click', () => audio.paused ? playMusic() : audio.pause());
+  /* 박자 — 낮은 소리(150Hz 아래, 북 · 베이스)의 세기가 바로 앞 평균의 1.35배를 넘으면 「쿵」.
+     새 「쿵」 은 앞의 것과 0.25초 넘게 떨어져야 하고, 「쿵」 뒤 0.1초는 커지기만 한다(한 번을 두 번 세지 않게) */
+  function readBeat(dt, t) {
+    const now = t / 1000;
+    if (an && S.beat && !audio.paused) {
+      an.getFloatTimeDomainData(tbuf);
+      let s = 0; for (let i = 0; i < tbuf.length; i++) s += tbuf[i] * tbuf[i];
+      const e = Math.sqrt(s / tbuf.length), ratio = e / (bAvg + 1e-4);
+      bAvg += (e - bAvg) * Math.min(1, dt * 2.5);
+      if (ratio > 1.35 && e > .02) {
+        if (now - lastHit > .25) lastHit = now;
+        if (now - lastHit < .1) bump = Math.max(bump, clamp((ratio - 1) * 1.2, .4, 1));
+      }
+    }
+    if (now - lastHit >= .1) bump = Math.max(0, bump - dt * 3);
+  }
+
+  /* ── 끌어다 놓기 — 이미지는 터널로, 음악은 배경음악으로 ── */
+  let dragN = 0;
+  const hasFiles = e => !!e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  document.addEventListener('dragenter', e => { if (hasFiles(e)) { dragN++; stage.classList.add('dragging'); } });
+  document.addEventListener('dragleave', e => { if (hasFiles(e) && --dragN <= 0) { dragN = 0; stage.classList.remove('dragging'); } });
+  document.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  document.addEventListener('drop', e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); dragN = 0; stage.classList.remove('dragging');
+    const imgs = [...e.dataTransfer.files].filter(f => /^image\//.test(f.type));
+    if (imgs.length) addPhotos(imgs);
+    for (const f of e.dataTransfer.files) {
+      if (/^image\//.test(f.type)) continue;
+      else if (/^audio\//.test(f.type) || AUD.test(f.name)) useMusic(f);
+      else if (/\.html?$/i.test(f.name)) say(L('HTML 은 「영상 만들기」 칸의 인트로 · 엔딩 줄에 놓으세요.', 'Drop HTML files onto the intro/ending rows in the “Make a video” card.'));
+    }
+  });
+
+  /* ── 모드 단추 ── */
+  function paintModes() { document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === mode)); placeSel(); }
+  function setMode(m) {
+    if (m === 'tab' || m === 'screen') return startLive(m);
+    if (m === 'photo' && !photos.length) { $('imgFile').click(); say(L('이미지를 고르거나, 화면에 끌어다 놓거나, Ctrl+V 로 붙여 넣으세요.', 'Choose an image, drag it onto the screen, or paste it with Ctrl+V.')); return; }
+    stopLive(true); mode = m; paintModes(); resetSel(); mt = startMt();
+    say(m === 'sim' ? L('흉내 모드 — 화면을 공유하지 않고 계산해 그린 무한 거울입니다. 파란 테두리를 옮기고 크기를 바꿔 보세요.', 'Simulated — an infinite mirror computed and drawn without sharing your screen. Try moving and resizing the blue frame.')
+      : L('사진 안의 테두리 자리에 같은 사진이 끝없이 들어갑니다.', 'The same picture goes endlessly into the frame inside it.'));
+  }
+  document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+
+  /* ── PNG 저장 — 진짜 공유는 캡처 영역만, 나머지는 보이는 그대로 ── */
+  function download(href, name) { const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+  $('saveBtn').addEventListener('click', () => {
+    let out = cv;
+    const crop = liveCrop();
+    if (crop) {
+      const c = document.createElement('canvas');
+      c.width = Math.round(crop[2]); c.height = Math.round(crop[3]);
+      c.getContext('2d').drawImage(video, crop[0], crop[1], crop[2], crop[3], 0, 0, c.width, c.height);
+      out = c;
+    }
+    download(out.toDataURL('image/png'), L('무한거울', 'infinite-mirror') + '-' + stamp() + '.png');
+  });
+
+  /* ══ 영상 만들기 — [인트로] → 무한 거울 → [엔딩] 을 한 영상으로 잇는다. 다 만든 뒤 「만든 영상」 칸에서 재생해 보고 내려받는다 ══
+     거울 부분은 캔버스를 1280×720(큰 화면이면 1920×1080) 판에 옮겨 그려 녹화한다(권한 필요 없음).
+     인트로 · 엔딩은 다른 HTML 이라 캔버스로 옮길 수 없어서, 이 탭을 녹화(getDisplayMedia · 이 탭)해 무대 자리만 잘라 같은 판에 그린다.
+     음악은 거울 부분에만 — 거울이 시작될 때 처음부터 커지며 나오고, 엔딩이 시작되면(또는 끝날 때) 1초 동안 잦아든다. 카톡에 바로 붙게 MP4 를 먼저 고른다 */
+  const SEGF = { intro: null, end: null };          // 파일로 고른 인트로 · 엔딩 { url(blob), name } — 기억하지 않는다
+  const segName = k => k === 'intro' ? L('인트로', 'Intro') : L('엔딩', 'Ending');
+  function linkOf(v) {                               // 칸에 넣은 글 → 열 수 있는 주소(아니면 빈 글)
+    v = String(v || '').trim(); if (!v) return '';
+    if (/^[a-z]:[\\/]/i.test(v)) return 'file:///' + v.replace(/\\/g, '/');      // C:\…\intro.html
+    if (/^(https?|file):\/\//i.test(v)) return v;
+    if (/^[\w-]+(\.[\w-]+)+(:\d+)?([/?#]|$)/.test(v)) return 'https://' + v;    // 주소만 적은 경우
+    return '';
+  }
+  const segUrl = k => SEGF[k] ? SEGF[k].url : linkOf(S[k + 'Url']);
+
+  /* 인트로 · 엔딩 페이지를 무대 위에 띄운다 — 다 불러오면(늦어도 10초) ready */
+  const segFrame = $('segFrame');
+  let frameJob = 0;
+  function showFrame(url, ready) {
+    const job = ++frameJob; let done = false;
+    const fin = () => { if (done || job !== frameJob) return; done = true; segFrame.classList.add('show'); if (ready) ready(); };
+    segFrame.classList.remove('show'); stage.classList.add('framing');
+    segFrame.onload = () => { if (job === frameJob && segFrame.getAttribute('src') === url) fin(); };
+    segFrame.src = url;
+    setTimeout(fin, 10000);
+  }
+  function hideFrame() { frameJob++; segFrame.onload = null; segFrame.classList.remove('show'); stage.classList.remove('framing'); segFrame.src = 'about:blank'; }
+
+  /* 미리 보기 — 정한 길이만큼 띄웠다가 닫는다 */
+  let pv = null;
+  function closePreview() { if (!pv) return; clearTimeout(pv.timer); pv = null; hideFrame(); paintSegs(); }
+  function preview(k) {
+    if (rec) return;
+    if (pv && pv.k === k) return closePreview();
+    closePreview();
+    const url = segUrl(k);
+    if (!url) return say(L(`${segName(k)} 줄에 링크를 넣거나 「파일」 로 HTML 을 고르세요.`, `Put a link in the ${segName(k)} row, or pick an HTML file with “File”.`), true);
+    const me = pv = { k, timer: 0 };
+    paintSegs();
+    say(L(`${segName(k)} 미리 보기 — ${S[k + 'Sec']}초 뒤 닫힙니다. 안 보이면 그 사이트가 다른 페이지 안에 넣는 것을 막아 둔 것입니다.`,
+      `${segName(k)} preview — closes in ${S[k + 'Sec']}s. If nothing shows, that site blocks being placed inside other pages.`));
+    showFrame(url, () => { if (pv === me) me.timer = setTimeout(closePreview, S[k + 'Sec'] * 1000 + 300); });
+  }
+  function paintSegs() { document.querySelectorAll('.segrow').forEach(row => { row.querySelector('[data-act="try"]').textContent = pv && pv.k === row.dataset.seg ? L('닫기', 'Close') : L('미리 보기', 'Preview'); }); }
+
+  /* 길이 — 거울 부분(인트로 · 엔딩은 따로 더한다). 「음악 한 곡」 이면 음악 길이(음악은 거울 부분에만 나온다) */
+  function mainSec() {
+    if (S.len === 'manual') return Infinity;
+    if (S.len === 'song') return musURL && isFinite(audio.duration) && audio.duration > 0 ? Math.max(3, Math.min(300, audio.duration)) : 20;
+    return +S.len || 20;
+  }
+  function paintLen() {
+    const i = segUrl('intro') ? S.introSec : 0, e = segUrl('end') ? S.endSec : 0, m = mainSec(), sec = n => L(`${n}초`, `${n}s`);
+    const parts = [i ? L('인트로 ', 'intro ') + sec(i) : '', m === Infinity ? L('거울(「끝내기」 를 누를 때까지)', 'mirror (until you press Finish)') : L('거울 ', 'mirror ') + sec(Math.round(m)), e ? L('엔딩 ', 'ending ') + sec(e) : ''].filter(Boolean);
+    $('lenTip').textContent = '→ ' + parts.join(' + ') + (m === Infinity ? '' : L(` = 약 ${mmss(i + m + e)}`, ` = about ${mmss(i + m + e)}`))
+      + (S.len === 'song' && !(musURL && isFinite(audio.duration)) ? L(' · 음악을 넣으면 그 길이에 맞춥니다', ' · add music to match its length') : '');
+  }
+  $('len').addEventListener('change', e => { S.len = e.target.value; keep(); paintLen(); });
+  audio.addEventListener('loadedmetadata', paintLen);
+
+  /* 인트로 · 엔딩 줄 — 링크 · 파일 · 미리 보기 · 빼기 · 길이. .html 파일을 줄에 끌어다 놓아도 된다 */
+  let pickFor = '';
+  function dropSegFile(k) { if (SEGF[k]) { URL.revokeObjectURL(SEGF[k].url); SEGF[k] = null; } }
+  function useSegFile(k, f) {
+    if (!/\.html?$/i.test(f.name) && f.type !== 'text/html') return say(L('HTML 파일(.html)을 고르세요.', 'Pick an HTML file (.html).'), true);
+    if (pv && pv.k === k) closePreview();
+    dropSegFile(k);
+    SEGF[k] = { url: URL.createObjectURL(new Blob([f], { type: 'text/html' })), name: f.name };
+    syncInputs(); paintLen();
+    say(L(`${segName(k)} 파일을 붙였습니다(${f.name}). 「미리 보기」 로 확인해 보세요 — 파일 하나로 된 HTML 이어야 그림 · 글꼴이 다 나옵니다.`,
+      `${segName(k)} file attached (${f.name}). Check it with “Preview” — it should be a single-file HTML so pictures and fonts all show.`));
+  }
+  document.querySelectorAll('.segrow').forEach(row => {
+    const k = row.dataset.seg, inp = $(k + 'Url');
+    row.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b || b.disabled) return;
+      if (b.dataset.act === 'file') { pickFor = k; $('segFile').click(); }
+      else if (b.dataset.act === 'try') preview(k);
+      else if (b.dataset.act === 'clear') { if (pv && pv.k === k) closePreview(); dropSegFile(k); S[k + 'Url'] = ''; keep(); syncInputs(); paintLen(); }
+    });
+    inp.addEventListener('input', () => { if (SEGF[k]) return; S[k + 'Url'] = inp.value.slice(0, 2000); keep(); paintLen(); });
+    $(k + 'Sec').addEventListener('change', e => { S[k + 'Sec'] = clamp(Math.round(+e.target.value) || S0[k + 'Sec'], 1, 60); e.target.value = S[k + 'Sec']; keep(); paintLen(); });
+    row.addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); row.classList.add('over'); } });
+    row.addEventListener('dragleave', () => row.classList.remove('over'));
+    row.addEventListener('drop', e => {
+      if (!hasFiles(e)) return;
+      e.preventDefault(); e.stopPropagation(); row.classList.remove('over'); dragN = 0; stage.classList.remove('dragging');
+      const f = [...e.dataTransfer.files].find(x => /\.html?$/i.test(x.name) || x.type === 'text/html');
+      if (f) useSegFile(k, f); else say(L('HTML 파일(.html)을 놓으세요.', 'Drop an HTML file (.html).'), true);
+    });
+  });
+  $('segFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f && pickFor) useSegFile(pickFor, f); });
+
+  /* ── 녹화 ── */
+  function recMime(withAudio) {
+    const C = withAudio
+      ? ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4;codecs=avc1,opus', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+      : ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+    return C.find(m => MediaRecorder.isTypeSupported(m)) || '';
+  }
+  /* 이 탭 녹화 — 크롬이 「이 탭 공유」 를 묻는다. 무대 자리만 잘라 받는다(Region Capture, 안 되면 그릴 때 직접 자름) */
+  async function grabTab() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) throw new Error(L('이 브라우저는 탭 녹화를 못 합니다 — 크롬이나 엣지에서 파일을 바로 여세요.', 'This browser can’t record a tab — open the file directly in Chrome or Edge.'));
+    const pp = document.permissionsPolicy || document.featurePolicy;
+    if (pp && pp.allowsFeature && !pp.allowsFeature('display-capture')) throw new Error(L('이 페이지가 다른 페이지 안에 들어 있어 탭 녹화가 막혀 있습니다 — 파일을 크롬에서 바로 여세요.', 'This page is inside another page, so tab recording is blocked — open the file directly in Chrome.'));
+    let s;
+    try {
+      s = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true, preferCurrentTab: true, selfBrowserSurface: 'include',
+        surfaceSwitching: 'exclude', systemAudio: 'exclude', monitorTypeSurfaces: 'exclude' });
+    } catch (e) {
+      const m = (e && e.message) || String(e);
+      throw new Error(e && e.name === 'NotAllowedError' && !/policy/i.test(m)
+        ? L('인트로 · 엔딩을 넣으려면 크롬이 묻는 「이 탭 공유」 를 허용해야 합니다. 다시 누르면 다시 묻습니다.', 'To add an intro or ending, allow Chrome’s “share this tab” prompt. Press again to be asked again.')
+        : L('탭을 녹화하지 못했습니다 — ', 'Couldn’t record the tab — ') + m);
+    }
+    const tr = s.getVideoTracks()[0], set = (tr && tr.getSettings && tr.getSettings()) || {};
+    if (!tr || (set.displaySurface && set.displaySurface !== 'browser')) {
+      s.getTracks().forEach(t => t.stop());
+      throw new Error(L('창이나 화면 전체가 아니라 「이 탭」 을 골라야 합니다. 다시 눌러 주세요.', 'Pick “this tab”, not a window or the whole screen. Press again.'));
+    }
+    let cropped = false;
+    if (window.CropTarget && tr.cropTo) { try { await tr.cropTo(await CropTarget.fromElement(stage)); cropped = true; } catch (_) {} }
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.srcObject = s;
+    await v.play().catch(() => {});
+    return { s, v, cropped, src: null, g: null, dead: false };
+  }
+  function dropTab(r) {
+    if (!r.tab) return;
+    try { if (r.tab.src) r.tab.src.disconnect(); if (r.tab.g) r.tab.g.disconnect(); } catch (_) {}
+    r.tab.s.getTracks().forEach(t => t.stop()); r.tab.v.srcObject = null; r.tab = null;
+  }
+  function ramp(g, to, sec) { if (!g || !actx) return; const now = actx.currentTime; g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.linearRampToValueAtTime(to, now + sec); }
+  function musOn(r) {                                // 거울 부분 시작 — 음악을 처음부터, 0.5초 동안 커지며
+    r.mus = true;
+    if (!musURL || !outG) return;
+    audio.currentTime = 0;
+    outG.gain.cancelScheduledValues(actx.currentTime); outG.gain.value = 0; recG.gain.cancelScheduledValues(actx.currentTime); recG.gain.value = 0;
+    playMusic(); ramp(outG, S.vol, .5); if (r.aMode === 'music') ramp(recG, 1, .5);
+  }
+  function musOff(r) { if (!r.mus) return; r.mus = false; if (outG) { ramp(outG, 0, 1); ramp(recG, 0, 1); } }
+  function restartMotion() { if (!isLive() && !drag) { mt = startMt(); holdUntil = 0; } }   // 거울 부분은 움직임의 처음(맨 앞)부터
+  function lockUI(on) { document.body.classList.toggle('rec', on); document.querySelectorAll('[data-mode], .segrow button, .segrow input, #len').forEach(el => { el.disabled = on; }); }
+
+  let recBusy = false;
+  async function startRec() {
+    if (rec || recBusy) return;
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) return say(L('이 브라우저는 영상 녹화를 못 합니다 — 크롬이나 엣지를 쓰세요.', 'This browser can’t record video — use Chrome or Edge.'), true);
+    closePreview();
+    const intro = segUrl('intro'), ending = segUrl('end');
+    let tab = null;
+    if (intro || ending) {
+      recBusy = true;
+      { const sr = stage.getBoundingClientRect(); if (sr.top < 0 || sr.bottom > innerHeight) stage.scrollIntoView({ block: 'center' }); }
+      say(L('인트로 · 엔딩을 넣으려면 크롬이 묻는 「이 탭 공유」 를 허용하세요 …', 'To add the intro/ending, allow Chrome’s “share this tab” prompt …'));
+      try { tab = await grabTab(); } catch (e) { recBusy = false; return say(e.message, true); }
+      recBusy = false;
+    }
+    const big = W >= 1800, rc = document.createElement('canvas');
+    rc.width = big ? 1920 : 1280; rc.height = big ? 1080 : 720;
+    const rcx = rc.getContext('2d'); rcx.fillStyle = '#000'; rcx.fillRect(0, 0, rc.width, rc.height);
+    let aMode = '';
+    if (tab && tab.s.getAudioTracks().length && ctx()) {   // 인트로 · 엔딩이 있으면 들리는 소리 그대로(그 페이지 소리 + 음악)
+      try {
+        tab.src = actx.createMediaStreamSource(new MediaStream(tab.s.getAudioTracks())); tab.g = actx.createGain(); tab.g.gain.value = 0;
+        tab.src.connect(tab.g); tab.g.connect(recDest); aMode = 'tab';
+      } catch (_) {}
+    }
+    if (!aMode && outG && musURL) aMode = 'music';
+    const tracks = rc.captureStream(30).getVideoTracks();
+    if (aMode) tracks.push(...recDest.stream.getAudioTracks());
+    const mime = recMime(!!aMode);
+    let mr;
+    try { mr = new MediaRecorder(new MediaStream(tracks), Object.assign({ videoBitsPerSecond: big ? 10e6 : 6e6, audioBitsPerSecond: 192e3 }, mime ? { mimeType: mime } : {})); }
+    catch (e) { tracks.forEach(t => { if (t.kind === 'video') t.stop(); }); dropTab({ tab }); return say(L('녹화를 시작하지 못했습니다 — ', 'Couldn’t start recording — ') + ((e && e.message) || e), true); }
+    const m = mainSec(), chunks = [];
+    mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    mr.onstop = () => finishRec(chunks, mr.mimeType || mime);
+    const r = rec = { mr, rc, rcx, tab, aMode, intro, ending, introMs: S.introSec * 1000, endMs: S.endSec * 1000, mainMs: m * 1000,
+      total: m === Infinity ? 0 : (intro ? S.introSec : 0) + m + (ending ? S.endSec : 0), musWas: !!musURL && !audio.paused,
+      seg: '', src: 'canvas', fade: null, t0: 0, segT0: 0, tailT0: 0, endShown: false, mus: false, stopping: false };
+    if (tab) { stage.classList.add('taking'); tab.s.getVideoTracks()[0].addEventListener('ended', () => { if (r.tab) r.tab.dead = true; }); }
+    if (intro && musURL) audio.pause();                // 인트로 동안은 음악을 쉰다(인트로 페이지 소리가 그대로 들리게)
+    stage.classList.add('recording'); lockUI(true); paintRec();
+    const go = () => {
+      if (rec !== r || r.t0) return;
+      r.t0 = r.segT0 = performance.now();
+      if (r.aMode === 'tab') ramp(r.tab.g, 1, .5);
+      if (r.seg === 'main') { musOn(r); restartMotion(); }
+      mr.start();
+      say(r.mainMs === Infinity
+        ? L('녹화 중 — 다 됐으면 「끝내기」 를 누르세요' + (ending ? '(엔딩이 붙고 끝납니다)' : '') + '. 녹화하는 동안 이 탭을 가리지 마세요(최대 5분).',
+            'Recording — press Finish when done' + (ending ? ' (the ending plays, then it stops)' : '') + '. Keep this tab visible while recording (max 5 min).')
+        : L(`녹화 중 — 약 ${mmss(r.total)} 뒤 저절로 끝나고 「만든 영상」 칸에 올라갑니다. 녹화하는 동안 이 탭을 가리지 마세요.`,
+            `Recording — it stops by itself in about ${mmss(r.total)} and appears under “Your videos”. Keep this tab visible while recording.`));
+    };
+    if (intro) { r.seg = 'intro'; r.src = 'tab'; say(L('인트로를 불러오는 중 …', 'Loading the intro …')); showFrame(intro, () => setTimeout(go, 150)); }
+    else { r.seg = 'main'; go(); }
+  }
+  /* 녹화 한 장면 — 지금 구간의 그림(거울 캔버스 · 탭 화면)을 판에 그린다. 구간이 바뀔 때 0.5초 겹쳐 넘기고, 처음 0.4초 · 끝 1초는 검게 */
+  function recPut(r, src) {
+    const g = r.rcx, w = r.rc.width, h = r.rc.height, t = r.tab;
+    if (src === 'tab' && t && !t.dead && t.v.readyState >= 2 && t.v.videoWidth) {
+      if (t.cropped) g.drawImage(t.v, 0, 0, w, h);
+      else {
+        const b = stage.getBoundingClientRect(), kx = t.v.videoWidth / innerWidth, ky = t.v.videoHeight / innerHeight;
+        g.drawImage(t.v, b.left * kx, b.top * ky, b.width * kx, b.height * ky, 0, 0, w, h);
+      }
+    } else g.drawImage(cv, 0, 0, w, h);
+  }
+  function fadeTo(r, src, now, after) { r.fade = { from: r.src, to: src, t0: now, after }; }
+  function recDraw(r, now) {
+    const g = r.rcx;
+    if (r.fade) {
+      const u = clamp((now - r.fade.t0) / 500, 0, 1);
+      recPut(r, r.fade.from); g.globalAlpha = u; recPut(r, r.fade.to); g.globalAlpha = 1;
+      if (u >= 1) { const f = r.fade; r.fade = null; r.src = f.to; if (f.after) f.after(); }
+    } else recPut(r, r.src);
+    const a = Math.max(1 - (now - r.t0) / 400, r.tailT0 ? (now - r.tailT0) / 900 : 0);
+    if (a > 0) { g.fillStyle = `rgba(0,0,0,${Math.min(1, a).toFixed(3)})`; g.fillRect(0, 0, r.rc.width, r.rc.height); }
+  }
+  function toMain(r, now) { r.seg = 'main'; r.segT0 = now; musOn(r); restartMotion(); fadeTo(r, 'canvas', now, hideFrame); }
+  function toEnding(r, now) {
+    if (r.fade) { r.src = r.fade.to; r.fade = null; }  // 넘기는 중이었으면 마저 넘긴 셈 치고
+    r.seg = 'ending'; r.segT0 = now; r.endShown = false; musOff(r);
+    showFrame(r.ending, () => setTimeout(() => {
+      if (rec !== r || r.tailT0) return;
+      const t = performance.now(); r.segT0 = t; r.endShown = true; fadeTo(r, 'tab', t);
+    }, 150));
+  }
+  function toTail(r, now) { r.tailT0 = now; musOff(r); if (r.aMode === 'tab') ramp(r.tab.g, 0, 1); paintRec(); }
+  function recTick(now) {
+    const r = rec, el = now - r.segT0;
+    if (!r.tailT0 && !r.fade) {
+      if (r.seg === 'intro' && el >= r.introMs) toMain(r, now);
+      else if (r.seg === 'main' && el >= r.mainMs - (r.ending ? 0 : 1000)) { if (r.ending) toEnding(r, now); else toTail(r, now); }
+      else if (r.seg === 'ending' && r.endShown && el >= r.endMs - 1000) toTail(r, now);
+      else if (now - r.t0 > 300e3) toTail(r, now);    // 5분 넘으면 마무리
+    }
+    recDraw(r, now);
+    if (r.tailT0 && now - r.tailT0 >= 1000 && !r.stopping) { r.stopping = true; r.mr.stop(); }
+  }
+  function stopRec() {                               // 「끝내기」 — 엔딩이 있으면 엔딩으로, 없으면 1초 동안 잦아들며 끝
+    const r = rec; if (!r || r.tailT0) return;
+    if (!r.t0) return cancelRec(r);                  // 인트로를 불러오는 중이면 그만두기
+    const now = performance.now();
+    if (r.seg !== 'ending' && r.ending) toEnding(r, now); else toTail(r, now);
+  }
+  function cancelRec(r) {
+    r.mr.ondataavailable = null; r.mr.onstop = null;
+    try { if (r.mr.state !== 'inactive') r.mr.stop(); } catch (_) {}
+    r.mr.stream.getVideoTracks().forEach(t => t.stop());
+    endRec(r); say(L('영상 만들기를 그만두었습니다.', 'Video making cancelled.'));
+  }
+  function endRec(r) {                               // 녹화가 끝나면 — 탭 녹화 · 인트로 화면 · 음악 갈래를 원래대로
+    dropTab(r); hideFrame();
+    if (outG) { recG.gain.cancelScheduledValues(actx.currentTime); recG.gain.value = 0; }
+    setVol();
+    if (musURL) { if (r.musWas) playMusic(); else audio.pause(); }
+    rec = null; stage.classList.remove('recording', 'taking'); lockUI(false); paintRec();
+  }
+  /* 크롬이 만드는 MP4 는 「조각난 MP4」(moof · mdat 여럿, moov 표는 비어 있음)라 윈도 플레이어가 길이를 잘못 읽고(20초 → 16.9초) 카톡 · 휴대폰에서
+     안 열리기도 한다. 표(stts · stsz · stco · stss · ctts)를 다 채운 moov 하나 + mdat 하나인 보통 MP4 로 다시 묶는다(영상 · 소리는 0.5초 덩어리로 번갈아).
+     모르는 꼴이면 null — 원래 것을 그대로 쓴다 */
+  function remuxMp4(buf) {
+    const u8 = new Uint8Array(buf), dv = new DataView(buf);
+    const tag = o => String.fromCharCode(u8[o], u8[o + 1], u8[o + 2], u8[o + 3]);
+    const kids = (o, e) => { const a = []; while (o + 8 <= e) { let sz = dv.getUint32(o), h = 8; if (sz === 1) { sz = Number(dv.getBigUint64(o + 8)); h = 16; } else if (!sz) sz = e - o; if (sz < h || o + sz > e) break; a.push({ t: tag(o + 4), o, p: o + h, e: o + sz }); o += sz; } return a; };
+    const sub = b => kids(b.p, b.e), one = (a, t) => a.find(b => b.t === t);
+    const top = kids(0, u8.length), moov = one(top, 'moov'), frags = top.filter(b => b.t === 'moof');
+    if (!moov || !frags.length) return null;
+    const mv = sub(moov), mvhd = one(mv, 'mvhd'), trex = {}, tracks = {};
+    for (const b of sub(one(mv, 'mvex') || { p: 0, e: 0 })) if (b.t === 'trex') trex[dv.getUint32(b.p + 4)] = [dv.getUint32(b.p + 12), dv.getUint32(b.p + 16), dv.getUint32(b.p + 20)];
+    for (const tk of mv.filter(b => b.t === 'trak')) {
+      const tc = sub(tk), tkhd = one(tc, 'tkhd'), mc = sub(one(tc, 'mdia')), mdhd = one(mc, 'mdhd'), hdlr = one(mc, 'hdlr'), nc = sub(one(mc, 'minf'));
+      tracks[dv.getUint32(tkhd.p + (u8[tkhd.p] ? 20 : 12))] = { tkhd, mdhd, hdlr, ts: dv.getUint32(mdhd.p + (u8[mdhd.p] ? 20 : 12)), keep: nc.filter(b => b.t !== 'stbl'),
+        stsd: one(sub(one(nc, 'stbl')), 'stsd'), vide: tag(hdlr.p + 8) === 'vide', s: [], next: 0 };
+    }
+    for (const mf of frags) for (const tf of sub(mf).filter(b => b.t === 'traf')) {
+      const tc = sub(tf), th = one(tc, 'tfhd'), fl = dv.getUint32(th.p) & 0xffffff, id = dv.getUint32(th.p + 4), T = tracks[id];
+      if (!T) continue;
+      let q = th.p + 8, base = mf.o, [ddu, dsz, dfl] = trex[id] || [0, 0, 0];
+      if (fl & 1) { base = Number(dv.getBigUint64(q)); q += 8; }
+      if (fl & 2) q += 4;
+      if (fl & 8) { ddu = dv.getUint32(q); q += 4; }
+      if (fl & 16) { dsz = dv.getUint32(q); q += 4; }
+      if (fl & 32) { dfl = dv.getUint32(q); q += 4; }
+      const tfdt = one(tc, 'tfdt');
+      let t = tfdt ? (u8[tfdt.p] ? Number(dv.getBigUint64(tfdt.p + 4)) : dv.getUint32(tfdt.p + 4)) : T.next, off = base;
+      if (T.s.length && t !== T.next) { const pv = T.s[T.s.length - 1]; pv.du = Math.max(0, pv.du + t - T.next); }   // 조각 사이 틈 — 앞 장면을 늘려 시각을 그대로
+      for (const tr of tc.filter(b => b.t === 'trun')) {
+        let r = tr.p; const v = u8[r], f = dv.getUint32(r) & 0xffffff, n = dv.getUint32(r + 4); r += 8;
+        if (f & 1) { off = base + dv.getInt32(r); r += 4; }
+        let first = -1; if (f & 4) { first = dv.getUint32(r); r += 4; }
+        for (let i = 0; i < n; i++) {
+          let du = ddu, sz = dsz, sf = i === 0 && first >= 0 ? first : dfl, co = 0;
+          if (f & 0x100) { du = dv.getUint32(r); r += 4; }
+          if (f & 0x200) { sz = dv.getUint32(r); r += 4; }
+          if (f & 0x400) { sf = dv.getUint32(r); r += 4; }
+          if (f & 0x800) { co = v ? dv.getInt32(r) : dv.getUint32(r); r += 4; }
+          if (off + sz > u8.length) return null;
+          T.s.push({ o: off, n: sz, du, co, key: !(sf & 0x10000), t });
+          off += sz; t += du;
+        }
+      }
+      T.next = t;
+    }
+    const list = Object.values(tracks).filter(T => T.s.length);
+    if (!list.some(T => T.vide)) return null;
+    const mts = dv.getUint32(mvhd.p + (u8[mvhd.p] ? 20 : 12)), chunks = [];
+    for (const T of list) {
+      const s = T.s; if (s.length > 1 && !s[s.length - 1].du) s[s.length - 1].du = s[s.length - 2].du;   // 마지막 장면 길이가 0 이면 앞의 것으로
+      T.t0 = s[0].t; T.dur = s[s.length - 1].t + s[s.length - 1].du - T.t0; T.ch = [];
+      let c = null;
+      for (const x of s) { if (!c || x.t - c.t >= T.ts / 2) { c = { T, t: x.t, s: [] }; chunks.push(c); T.ch.push(c); } c.s.push(x); }
+    }
+    chunks.sort((a, b) => a.t / a.T.ts - b.t / b.T.ts);
+    const cat = a => { let n = 0; for (const x of a) n += x.length; const o = new Uint8Array(n); n = 0; for (const x of a) { o.set(x, n); n += x.length; } return o; };
+    const U = a => { const o = new Uint8Array(a.length * 4), w = new DataView(o.buffer); a.forEach((x, i) => w.setUint32(i * 4, x >>> 0)); return o; };
+    const box = (t, ...xs) => { const b = cat(xs), o = new Uint8Array(b.length + 8); new DataView(o.buffer).setUint32(0, o.length); for (let i = 0; i < 4; i++) o[4 + i] = t.charCodeAt(i); o.set(b, 8); return o; };
+    const fbox = (t, vf, ...xs) => box(t, U([vf]), ...xs);
+    const raw = b => u8.slice(b.o, b.e);
+    const runs = (a, key) => { const o = []; for (const x of a) { const v = key(x); if (o.length && o[o.length - 1][1] === v) o[o.length - 1][0]++; else o.push([1, v]); } return o; };
+    const setDur = (b, at, v1, v) => { const w = new DataView(b.buffer); if (v1) { w.setUint32(at, Math.floor(v / 4294967296)); w.setUint32(at + 4, v >>> 0); } else w.setUint32(at, v >>> 0); };
+    const trak = (T, offs) => {
+      const s = T.s, md = Math.round(T.dur / T.ts * mts), t0m = Math.round(T.t0 / T.ts * mts), cts = s.some(x => x.co), mt0 = cts && s[0].co > 0 ? s[0].co : 0, el = [];
+      if (t0m > 0) el.push(t0m, 0xffffffff, 0x10000);                    // 늦게 시작한 트랙(소리 등)은 빈 편집으로 그만큼 띄운다
+      if (t0m > 0 || mt0) el.push(md, mt0, 0x10000);
+      T.total = t0m + md;
+      const th = raw(T.tkhd), h1 = T.tkhd.p - T.tkhd.o, v1 = u8[T.tkhd.p];
+      setDur(th, h1 + (v1 ? 28 : 20), v1, T.total);
+      const mh = raw(T.mdhd), h2 = T.mdhd.p - T.mdhd.o, v2 = u8[T.mdhd.p];
+      setDur(mh, h2 + (v2 ? 24 : 16), v2, T.dur);
+      let n = 0; const stsc = runs(T.ch, c => c.s.length).map(([k, v]) => { const e = [n + 1, v, 1]; n += k; return e; });
+      const stts = runs(s, x => x.du), tb = [raw(T.stsd), fbox('stts', 0, U([stts.length]), U(stts.flat()))];
+      if (cts) { const cr = runs(s, x => x.co); tb.push(fbox('ctts', s.some(x => x.co < 0) ? 0x1000000 : 0, U([cr.length]), U(cr.flat()))); }
+      if (T.vide && !s.every(x => x.key)) { const ks = []; s.forEach((x, i) => { if (x.key) ks.push(i + 1); }); tb.push(fbox('stss', 0, U([ks.length]), U(ks))); }
+      tb.push(fbox('stsc', 0, U([stsc.length]), U(stsc.flat())), fbox('stsz', 0, U([0, s.length]), U(s.map(x => x.n))), fbox('stco', 0, U([offs.length]), U(offs)));
+      return box('trak', th, ...(el.length ? [box('edts', fbox('elst', 0, U([el.length / 3]), U(el)))] : []),
+        box('mdia', mh, raw(T.hdlr), box('minf', ...T.keep.map(raw), box('stbl', ...tb))));
+    };
+    const build = offs => {
+      const traks = list.map((T, i) => trak(T, offs[i])), mh = raw(mvhd), v = u8[mvhd.p];
+      setDur(mh, mvhd.p - mvhd.o + (v ? 24 : 16), v, Math.max(...list.map(T => T.total)));
+      return box('moov', mh, ...traks);
+    };
+    const ftyp = box('ftyp', U([0x69736f6d, 0x200, 0x69736f6d, 0x69736f32, 0x61766331, 0x6d703431]));   // isom · iso2 · avc1 · mp41
+    let moovB = build(list.map(T => T.ch.map(() => 0)));
+    const start = ftyp.length + moovB.length + 8, at = new Map(); let pos = start;
+    for (const c of chunks) { at.set(c, pos); for (const x of c.s) pos += x.n; }
+    if (pos > 4294967295) return null;
+    moovB = build(list.map(T => T.ch.map(c => at.get(c))));
+    const mdat = new Uint8Array(8); new DataView(mdat.buffer).setUint32(0, pos - start + 8); mdat.set([0x6d, 0x64, 0x61, 0x74], 4);
+    const parts = [ftyp, moovB, mdat]; let a = -1, b = -1;
+    for (const c of chunks) for (const x of c.s) { if (x.o === b) b += x.n; else { if (a >= 0) parts.push(u8.subarray(a, b)); a = x.o; b = x.o + x.n; } }
+    if (a >= 0) parts.push(u8.subarray(a, b));
+    return parts;
+  }
+  async function finishRec(chunks, mime) {
+    const r = rec; if (!r) return;
+    const dur = (performance.now() - r.t0) / 1000;
+    r.mr.stream.getVideoTracks().forEach(t => t.stop());   // 녹음 갈래(recDest)는 다음 녹화에 다시 쓴다
+    endRec(r);
+    const type = (mime || 'video/webm').split(';')[0], ext = /mp4/.test(type) ? 'mp4' : 'webm';
+    let blob = new Blob(chunks, { type });
+    if (!blob.size) return say(L('녹화된 내용이 없습니다 — 이 탭을 보이게 두고 다시 해 보세요.', 'Nothing was recorded — keep this tab visible and try again.'), true);
+    if (ext === 'mp4') {                               // 어느 플레이어에서나 재생되게 보통 MP4 로 다시 묶는다(못 하면 그대로)
+      say(L('영상을 마무리하는 중 …', 'Finishing the video …'));
+      try { const parts = remuxMp4(await blob.arrayBuffer()); if (parts) blob = new Blob(parts, { type: 'video/mp4' }); } catch (_) {}
+    }
+    addResult(blob, L('무한거울', 'infinite-mirror') + '-' + stamp() + '.' + ext, dur, ext);
+    say(L('영상을 다 만들었습니다 — 위 「만든 영상」 칸에서 재생해 보고 「내려받기」 를 누르세요.', 'Your video is ready — play it under “Your videos” above and press Download.'));
+  }
+  /* 만든 영상 — 재생해 보고 「내려받기」(사용자가 누른 내려받기라 막히지 않는다). 새로 고치면 사라진다(최근 6개까지) */
+  function addResult(blob, name, dur, ext) {
+    const url = URL.createObjectURL(blob), box = document.createElement('div');
+    box.className = 'vid';
+    box.innerHTML = '<video controls playsinline preload="metadata"></video><div><b></b><span></span><div class="row">'
+      + '<a class="btn pri" download data-ko="내려받기" data-en="Download"></a><button type="button" data-ko="지우기" data-en="Delete"></button></div></div>';
+    box.querySelector('video').src = url;
+    box.querySelector('b').textContent = name;
+    const info = `${(blob.size / 1048576).toFixed(1)}MB · ${mmss(dur)} · ${ext.toUpperCase()}`, sp = box.querySelector('span');
+    sp.dataset.ko = info + (ext === 'webm' ? ' — 이 브라우저는 MP4 를 못 만들어 WebM 으로 만들었습니다' : ' — 카톡에 바로 보낼 수 있습니다');
+    sp.dataset.en = info + (ext === 'webm' ? ' — this browser can’t make MP4, so it is WebM' : ' — ready to send in a chat');
+    box.querySelectorAll('[data-en]').forEach(el => { el.textContent = LANG === 'en' ? el.dataset.en : el.dataset.ko; });
+    const a = box.querySelector('a'); a.href = url; a.download = name;
+    box.querySelector('button').addEventListener('click', () => { box.remove(); URL.revokeObjectURL(url); $('outCard').hidden = !$('outList').children.length; });
+    $('outList').prepend(box); $('outCard').hidden = false;
+    while ($('outList').children.length > 6) { const old = $('outList').lastElementChild; URL.revokeObjectURL(old.querySelector('a').href); old.remove(); }
+    $('outCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function paintRec() {
+    const b = $('recBtn'), r = rec;
+    b.classList.toggle('stop', !!r); b.classList.toggle('pri', !r);
+    if (!r) { b.textContent = L('영상 만들기', 'Make video'); return; }
+    const el = r.t0 ? (performance.now() - r.t0) / 1000 : 0, of = r.total ? ' / ' + mmss(r.total) : '';
+    const what = r.seg === 'intro' ? L('인트로', 'Intro') : r.seg === 'ending' ? L('엔딩', 'Ending') : L('녹화', 'Rec');
+    b.textContent = r.tailT0 ? L('마무리하는 중…', 'Finishing…') : !r.t0 ? L('인트로 불러오는 중 · 그만두기', 'Loading intro · Cancel') : `${what} ${mmss(el)}${of} · ${L('끝내기', 'Finish')}`;
+    $('recDot').textContent = `${L('녹화 중', 'REC')} ${mmss(el)}`;
+  }
+  $('recBtn').addEventListener('click', () => { if (rec) stopRec(); else startRec(); });
+
+  /* ══ 데모 연습 도우미 로봇 — Joo-JeoB 안내 로봇처럼 화면 부품을 짚어 가며 말풍선으로 발표 순서를 알려 준다.
+     「보여 주기」 는 로봇이 직접 누른다(움직임 칩 · 테두리 끌기 · 견본 사진 · 글자 · 색 — 모두 「처음대로」 로 되돌릴 수 있는 것만. 파일 고르기 · 공유 · 녹화는 누르지 않는다).
+     「직접 해 보기」 는 짚은 곳을 사람이 할 때까지 기다렸다가 칭찬하고 넘어간다 ══ */
+  let frameTouch = 0;                      // 사람이 테두리를 만진 횟수(직접 해 보기 판정)
+  const BOT = { on: false, ask: false, list: [], i: 0, tok: 0, el: null, typer: 0, finish: null, acting: false, hit: 0, base: null, snap: null, mode: 'show' };
+  try { if (localStorage.getItem('mirror-bot-mode') === 'try') BOT.mode = 'try'; } catch (_) {}
+  const SNAPK = ['motion', 'bg1', 'bg2', 'frame', 'tcol', 'text', 'hue', 'rot', 'spd'];
+  const isSample = p => /^demo-sample-/.test(p.name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  function botScript() {
+    const Q = [], add = (sel, ko, en, o) => Q.push(Object.assign({ sel, text: L(ko, en) }, o || {}));
+    const chip = v => () => document.querySelector(`#motions [data-v="${v}"]`);
+    add(null, '안녕하세요, 무한 거울 데모 도우미예요. 발표할 순서대로 화면을 짚어 가며 함께 연습해요.', 'Hi, I’m the Infinite Mirror demo helper. Let’s rehearse your demo in order — I’ll point at each part of the screen.', { wave: true });
+    add('#stage', '여기가 무대예요. 화면 안에 같은 화면이 끝없이 들어가요. 아래 도구를 만지는 동안에도 이 화면은 늘 보여요.', 'This is the stage — the same screen nested inside itself, forever. It stays in view while you use the tools.');
+    add(null, '먼저 「펼쳐지는 화면」 — 전체 화면을 공유했을 때처럼 한 겹씩 펼쳐지고, 끝까지 들어갔다가 맨 앞으로 나와요. 제가 눌러 볼게요.', 'First, “Unfolding screens” — layers unfold one by one like a real screen share, dive to the end and come back to the front. Let me press it.',
+      { pick: chip('unfold'), act: 'press', until: () => S.motion === 'unfold', watch: 6500, try: L('「펼쳐지는 화면」 을 직접 눌러 보세요.', 'Press “Unfolding screens” yourself.') });
+    add('#sel', '파란 테두리가 거울 자리예요. 끌어 옮기면 안쪽 화면들이 조금씩 늦게 따라와 터널이 뱀처럼 휘어요. 제가 끌어 볼게요.', 'The blue frame is where the mirror goes. Drag it and the inner screens follow a moment late, bending the tunnel like a snake. Let me drag it.',
+      { act: 'drag', watch: 900, try: L('테두리를 직접 끌어 보세요. 안쪽 화면들이 늦게 따라와요.', 'Drag the frame yourself — the inner screens follow a moment late.') });
+    add(null, '「들어갔다 나오기」 는 점처럼 작은 곳까지 들어갔다가 천천히 돌아 나와요.', '“In and back out” goes all the way in to a dot, then slowly comes back out.',
+      { pick: chip('dive'), act: 'press', until: () => S.motion === 'dive', watch: 5000, try: L('「들어갔다 나오기」 를 눌러 보세요.', 'Press “In and back out”.') });
+    add(null, '빠르기와 회전으로 움직임을 바꿔요. 회전을 조금만 주면 소용돌이가 돼요.', 'Speed and Rotation change the motion — a little rotation turns it into a swirl.', { pick: () => $('spd').closest('.row') });
+    if (photos.every(isSample)) add('#imgBtn', '내 사진을 여러 장 넣으면 1번 안에 2번, 그 안에 3번이 이어져요. 연습용 견본 사진 3장을 넣어 볼게요.', 'Add several photos and #2 goes inside #1, #3 inside #2 … I’ll add three sample pictures for practice.',
+      { act: 'samples', until: () => mode === 'photo' && photos.length >= 3, watch: 3000, try: L('「이미지 넣기」 로 내 사진을 골라 보세요(여러 장도 돼요).', 'Press “Add images” and pick your photos (several at once is fine).') });
+    add('#thumbs', '작은 그림을 끌어 순서를 바꾸고 × 로 뺄 수 있어요. 1번이 맨 앞이에요.', 'Drag the thumbnails to reorder, × to remove. #1 is in front.', { when: () => photos.length > 0 });
+    add(null, '「멀어졌다 다가오기」 — 그림 전체가 터널 속으로 멀어졌다가 다시 다가와요.', '“Away and back” — the whole picture recedes into the tunnel, then comes back.',
+      { pick: chip('away'), act: 'press', until: () => S.motion === 'away', watch: 6000, try: L('「멀어졌다 다가오기」 를 눌러 보세요.', 'Press “Away and back”.') });
+    add('#txt', '글자를 쓰면 겹마다 함께 빨려 들어가요. 축하 문구를 넣어 볼게요.', 'Text goes into every layer too. I’ll type a greeting.',
+      { act: 'type', watch: 3000, try: L('글자 칸에 축하 문구를 직접 써 보세요.', 'Type a greeting in the text box yourself.') });
+    add('#themes', '색 묶음을 고르면 바탕과 테두리 색이 한 번에 바뀌어요. 「노을」 로 바꿔 볼게요.', 'A color set changes the background and frame at once. I’ll switch to “Sunset”.',
+      { act: 'press', press: () => $('themes').children[1], until: () => S.bg1 === THEMES[1].bg1, watch: 3000, try: L('마음에 드는 색 묶음을 눌러 보세요.', 'Press a color set you like.') });
+    add(null, '내 음악 파일을 넣으면 「쿵」 할 때마다 화면이 출렁여요. 음악은 직접 골라야 해요.', 'Add your own music and the screen pulses on every beat. Music has to be picked by you.', { pick: () => $('musBtn').closest('.row') });
+    add(null, '「영상 만들기」 칸에서 거울 부분 길이를 고르고, 인트로 · 엔딩에 다른 HTML 을 붙일 수 있어요.', 'In “Make a video”, pick the mirror length and attach other HTML pages as an intro or ending.', { pick: () => $('len').closest('.row') });
+    add('#recBtn', '「영상 만들기」 를 누르면 녹화가 끝난 뒤 「만든 영상」 칸에 올라가요. 어느 플레이어에서나 재생되는 MP4 예요.', 'Press “Make video” and when it’s done it appears under “Your videos” — an MP4 that plays anywhere.');
+    add('[data-mode="screen"]', '진짜 발표 때는 「전체 화면 공유」 를 누르고 화면 전체를 고르면 진짜 무한 거울이 돼요.', 'For the real demo, press “Share entire screen” and pick your whole screen — it becomes a true infinite mirror.');
+    add(null, '연습 끝! 다시 하려면 언제든 저를 누르세요.', 'That’s the rehearsal! Press me any time to go again.');
+    return Q;
+  }
+  /* 자리 잡기 — 짚을 부품 아래나 위의 빈 곳에 로봇과 말풍선을 두고, 팔과 눈을 부품 쪽으로 돌린다(snap 이면 날지 않고 바로) */
+  function botPlace(snap) {
+    const bot = $('bot'), fig = $('botFig'), ring = $('botRing');
+    if (snap) { bot.classList.add('snap'); ring.classList.add('snap'); requestAnimationFrame(() => requestAnimationFrame(() => { bot.classList.remove('snap'); ring.classList.remove('snap'); })); }
+    const vw = document.documentElement.clientWidth, vh = innerHeight, bottom = vh - 10, top = 10, bw = bot.offsetWidth, bh = bot.offsetHeight;
+    const T = BOT.on ? BOT.el : null; let x, y, r = null;
+    if (T && T.isConnected && T.getClientRects().length) {
+      r = T.getBoundingClientRect();
+      const rl = Math.max(4, r.left - 6), rt = Math.max(4, r.top - 6), rr = Math.min(vw - 4, r.right + 6), rb = Math.min(vh - 4, r.bottom + 6);
+      ring.hidden = false; Object.assign(ring.style, { left: rl + 'px', top: rt + 'px', width: Math.max(0, rr - rl) + 'px', height: Math.max(0, rb - rt) + 'px' });
+      const below = bottom - r.bottom, above = r.top - top;
+      y = below >= bh + 12 ? r.bottom + 12 : above >= bh + 12 ? r.top - 12 - bh : below >= above ? bottom - bh : top;
+      const cx = r.left + r.width / 2;
+      x = Math.min(Math.max(12, cx - bw / 2), vw - 12 - bw);
+      bot.classList.toggle('flip', cx > x + bw / 2);
+    } else { ring.hidden = true; bot.classList.add('flip'); x = vw - 12 - bw; y = bottom - bh; }
+    bot.style.setProperty('--bx', Math.round(x) + 'px'); bot.style.setProperty('--by', Math.round(y) + 'px');
+    const fw = fig.offsetWidth, fh = fig.offsetHeight, fx = x + (bot.classList.contains('flip') ? bw - fw : 0), fy = y + bh - fh;
+    let la = '10deg', ra = '-10deg', ex = 0, ey = 0;
+    if (r) {
+      const tx = r.left + r.width / 2, ty = r.top + r.height / 2, right = tx >= fx + fw / 2;
+      const sx = fx + fw * (right ? 150 : 37) / 200, sy = fy + fh * 131 / 260;
+      let a = Math.atan2(-(tx - sx), ty - sy) * 180 / Math.PI;     // 팔은 아래(0°)에서 돈다
+      if (right) ra = Math.min(-15, Math.max(-165, a)).toFixed(0) + 'deg'; else la = Math.max(15, Math.min(165, a)).toFixed(0) + 'deg';
+      const d = Math.hypot(tx - (fx + fw / 2), ty - (fy + fh * .28)) || 1;
+      ex = (tx - (fx + fw / 2)) / d * 5; ey = (ty - (fy + fh * .28)) / d * 4;
+    }
+    fig.style.setProperty('--la', la); fig.style.setProperty('--ra', ra); fig.style.setProperty('--ex', ex.toFixed(1) + 'px'); fig.style.setProperty('--ey', ey.toFixed(1) + 'px');
+  }
+  const botSettle = el => new Promise(res => { let last = '', same = 0, n = 0; const tick = () => { const r = el.getBoundingClientRect(), k = Math.round(r.top) + ',' + Math.round(r.left); same = k === last ? same + 1 : 0; last = k; if (same >= 3 || ++n > 70) return res(); requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+  function botType(text) {                 // 타자 — 다 쓴 크기로 먼저 자리를 잡아 말풍선이 출렁이지 않게
+    const box = $('botText'); clearInterval(BOT.typer);
+    box.innerHTML = '<span></span><span class="off"></span>';
+    const on = box.firstChild, off = box.lastChild, ch = [...text]; off.textContent = text;
+    return new Promise(res => {
+      let n = 0;
+      BOT.finish = () => { clearInterval(BOT.typer); on.textContent = text; off.textContent = ''; BOT.finish = null; res(); };
+      if (RM) return BOT.finish();
+      BOT.typer = setInterval(() => { n++; on.textContent = ch.slice(0, n).join(''); off.textContent = ch.slice(n).join(''); if (n >= ch.length) BOT.finish(); }, 24);
+    });
+  }
+  function botBounce(cls) { const b = $('bot'); b.classList.remove(cls); void b.offsetWidth; b.classList.add(cls); setTimeout(() => b.classList.remove(cls), cls === 'bot-wave' ? 2200 : 700); }
+  async function botTap(el, noClick) {     // 누르는 물결 + 깡충 — noClick 이면 누르는 시늉만(파일 고르기 창은 열지 않는다)
+    const r = el.getBoundingClientRect(), tap = $('botTap');
+    tap.style.left = (r.left + r.width / 2) + 'px'; tap.style.top = (r.top + r.height / 2) + 'px';
+    tap.classList.remove('go'); void tap.offsetWidth; tap.classList.add('go'); botBounce('bot-hop');
+    await wait(220); if (!noClick) el.click();
+  }
+  async function botWaitFor(fn, ms, tok) { const t0 = performance.now(); while (performance.now() - t0 < ms && tok === BOT.tok) { try { if (fn()) return true; } catch (_) {} await wait(120); } return false; }
+  function demoDrag() {                    // 로봇이 테두리를 끌어 보는 흉내 — 사람이 끌 때처럼 움직임을 맨 바깥에 멈추고, 끝나면 제자리로
+    return new Promise(res => {
+      const r0 = Object.assign({}, R), t0 = performance.now(), D = RM ? 1 : 2800;
+      holdUntil = Infinity; mt = 0;
+      const step = now => {
+        const u = Math.min(1, (now - t0) / D), a = u * Math.PI * 2, k = Math.sin(Math.PI * u);
+        R.x = clamp(r0.x + .17 * k * Math.sin(a), 0, 1 - R.w); R.y = clamp(r0.y + .11 * k * Math.sin(2 * a), 0, 1 - R.h); placeSel();
+        if (u < 1) requestAnimationFrame(step); else { Object.assign(R, r0); placeSel(); holdUntil = performance.now() + 1200; res(); }
+      };
+      requestAnimationFrame(step);
+    });
+  }
+  async function demoSamples() {           // 연습용 견본 사진 3장(번호는 가운데 테두리에 안 가리게 왼쪽에)
+    const C = [['#FF8A5B', '#6A2D7A'], ['#2D9A6F', '#0B3D2A'], ['#3E9BFF', '#0A2A6E']], files = [];
+    for (let i = 0; i < 3; i++) {
+      const c = document.createElement('canvas'); c.width = 1280; c.height = 720; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 1280, 720);
+      gr.addColorStop(0, C[i][0]); gr.addColorStop(1, C[i][1]); g.fillStyle = gr; g.fillRect(0, 0, 1280, 720);
+      g.fillStyle = 'rgba(255,255,255,.92)'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `800 260px ${FF}`; g.fillText(String(i + 1), 200, 330); g.font = `700 40px ${FF}`; g.fillText(L('견본 사진', 'Sample'), 200, 520);
+      const b = await new Promise(r => c.toBlob(r, 'image/png'));
+      files.push(new File([b], `demo-sample-${i + 1}.png`, { type: 'image/png' }));
+    }
+    await addPhotos(files);
+  }
+  async function demoType() {
+    const want = L('무한히 축하합니다', 'Congratulations, forever'), el = $('txt');
+    el.value = ''; for (const ch of want) { el.value += ch; el.dispatchEvent(new Event('input')); await wait(RM ? 0 : 75); }
+  }
+  function tryDone(e) {                    // 직접 해 보기 — 사람이 그 일을 했는지
+    const b = BOT.base;
+    return e.act === 'press' ? BOT.hit > 0 : e.act === 'drag' ? frameTouch > b.touch : e.act === 'samples' ? photos.length > b.n : !!S.text.trim() && S.text !== b.text;
+  }
+  const botChanged = () => !!BOT.snap && (SNAPK.some(k => S[k] !== BOT.snap[k]) || photos.some(isSample));
+  function paintBotMode() {
+    document.querySelectorAll('[data-bm]').forEach(b => { b.classList.toggle('on', b.dataset.bm === BOT.mode); b.textContent = b.dataset.bm === 'show' ? L('보여 주기', 'Show me') : L('직접 해 보기', 'I’ll try'); });
+    $('botUndo').textContent = L('처음대로', 'Undo all'); $('botPrev').textContent = L('이전', 'Back');
+  }
+  async function botShow(i, dir = 1) {
+    const tok = ++BOT.tok, e = BOT.list[i];
+    if (!e) return botEnd();
+    if (e.when && !e.when()) return botShow(i + dir < 0 ? 0 : i + dir, i + dir < 0 ? 1 : dir);
+    BOT.i = i; BOT.hit = 0; BOT.base = { touch: frameTouch, n: photos.length, text: S.text };
+    const el = e.pick ? e.pick() : e.sel ? document.querySelector(e.sel) : null, last = i === BOT.list.length - 1, tryIt = !!e.act && BOT.mode === 'try';
+    BOT.el = el && el.getClientRects().length ? el : null;
+    paintBotMode();
+    $('botStep').textContent = L(`데모 연습 ${i + 1} / ${BOT.list.length}`, `Demo practice ${i + 1} / ${BOT.list.length}`);
+    $('botPrev').hidden = false; $('botPrev').disabled = i === 0;
+    $('botClose').textContent = L('그만', 'Stop');
+    $('botNext').textContent = e.act ? L('건너뛰기', 'Skip') : last ? L('끝', 'Done') : L('다음', 'Next');
+    $('botUndo').hidden = !(last && botChanged());
+    const text = tryIt ? e.try : e.text;
+    $('botBubble').hidden = false; $('botText').textContent = text;
+    if (BOT.el) { BOT.el.scrollIntoView({ block: 'center', behavior: RM ? 'auto' : 'smooth' }); await botSettle(BOT.el); if (tok !== BOT.tok) return; }
+    botPlace();
+    if (e.wave) botBounce('bot-wave');
+    await botType(text);
+    if (tok !== BOT.tok || !e.act) return;
+    if (tryIt) {                           // 사람이 할 때까지 기다린다(「건너뛰기」 로 넘어갈 수 있다)
+      if (!await botWaitFor(() => tryDone(e), 180000, tok)) return;
+      botBounce('bot-hop'); await botType(L('잘했어요! 바로 그거예요.', 'Nice — that’s it!')); await wait(1100);
+      if (tok === BOT.tok) botShow(i + 1);
+      return;
+    }
+    await wait(650); if (tok !== BOT.tok) return;
+    BOT.acting = true;
+    try {
+      if (e.act === 'press') { const t = e.press ? e.press() : BOT.el; if (t) await botTap(t); }
+      else if (e.act === 'drag') { await botTap(sel, true); await demoDrag(); }
+      else if (e.act === 'samples') { await botTap($('imgBtn'), true); await demoSamples(); }
+      else if (e.act === 'type') await demoType();
+    } finally { BOT.acting = false; }
+    if (e.until) await botWaitFor(e.until, 9000, tok);
+    if (tok !== BOT.tok) return;
+    if (BOT.el) botPlace(true);
+    await wait(RM ? 300 : e.watch || 600);
+    if (tok === BOT.tok) botShow(i + 1);
+  }
+  function botStart() {
+    BOT.ask = false; BOT.on = true;
+    if (!BOT.snap) { BOT.snap = {}; SNAPK.forEach(k => { BOT.snap[k] = S[k]; }); }   // 연습 전 설정 — 「처음대로」 를 누를 때까지 지닌다(다시 연습해도 그대로)
+    try { localStorage.setItem('mirror-bot-seen', '1'); } catch (_) {}
+    BOT.list = botScript(); botShow(0);
+  }
+  function botEnd() {
+    BOT.tok++; BOT.on = false; BOT.ask = false; BOT.el = null; clearInterval(BOT.typer);
+    $('botBubble').hidden = true; botPlace();
+  }
+  function botAsk() {                      // 처음 온 사람에게 한 번 — 연습할까요?
+    BOT.ask = true; BOT.el = null; paintBotMode();
+    $('botStep').textContent = L('데모 연습 도우미', 'Demo practice helper');
+    $('botPrev').hidden = true; $('botUndo').hidden = true;
+    $('botClose').textContent = L('괜찮아요', 'No thanks'); $('botNext').textContent = L('연습 시작', 'Start');
+    $('botBubble').hidden = false;
+    $('botText').textContent = L('처음 오셨네요. 발표할 순서를 제가 화면을 짚어 가며 함께 연습해 드릴까요?', 'First time here? Shall I walk you through the demo, pointing at each part, so you can rehearse it?');
+    botPlace(); botBounce('bot-wave');
+  }
+  function botUndo() {                     // 연습하며 바뀐 설정 · 견본 사진을 처음대로
+    if (!BOT.snap) return;
+    Object.assign(S, BOT.snap);
+    for (let i = photos.length - 1; i >= 0; i--) if (isSample(photos[i])) dropPhoto(i);
+    paintThumbs(); syncInputs(); look(); keep();
+    if (mode === 'photo' && !photos.length) setMode('sim'); else mt = startMt();
+    BOT.snap = null; $('botUndo').hidden = true; botPlace();
+    say(L('연습하며 바뀐 설정을 처음대로 되돌렸습니다.', 'Everything changed during the rehearsal is back to how it was.'));
+  }
+  function botLang() { if (BOT.on) { BOT.list = botScript(); botShow(Math.min(BOT.i, BOT.list.length - 1)); } else if (BOT.ask) botAsk(); }
+  $('botFig').addEventListener('click', () => { if (BOT.on) { if (BOT.finish) BOT.finish(); } else botStart(); });
+  $('botNext').addEventListener('click', () => { if (BOT.ask) return botStart(); if (!BOT.on) return; if (BOT.finish && !BOT.list[BOT.i].act) return BOT.finish(); botShow(BOT.i + 1); });
+  $('botPrev').addEventListener('click', () => { if (BOT.on && BOT.i > 0) botShow(BOT.i - 1, -1); });
+  $('botClose').addEventListener('click', () => { if (BOT.ask) { try { localStorage.setItem('mirror-bot-seen', '1'); } catch (_) {} } botEnd(); });
+  $('botUndo').addEventListener('click', botUndo);
+  document.querySelectorAll('[data-bm]').forEach(b => b.addEventListener('click', () => {
+    BOT.mode = b.dataset.bm; try { localStorage.setItem('mirror-bot-mode', BOT.mode); } catch (_) {}
+    paintBotMode(); if (BOT.on && BOT.list[BOT.i] && BOT.list[BOT.i].act) botShow(BOT.i);
+  }));
+  document.addEventListener('click', e => { if (BOT.on && !BOT.acting && BOT.el && BOT.el.contains(e.target)) BOT.hit++; }, true);   // 짚은 곳을 사람이 눌렀는지
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && (BOT.on || BOT.ask)) botEnd(); });
+  let botRaf = 0;
+  const botFollow = () => { if (botRaf) return; botRaf = requestAnimationFrame(() => { botRaf = 0; if (!BOT.acting) botPlace(true); }); };   // 넘기거나 창 크기가 바뀌면 따라간다
+  addEventListener('scroll', botFollow, { passive: true }); addEventListener('resize', botFollow);
+  function botInit() {
+    paintBotMode(); botPlace(true);
+    let seen = false; try { seen = !!localStorage.getItem('mirror-bot-seen'); } catch (_) {}
+    if (!seen) setTimeout(() => { if (!BOT.on && !rec) { botAsk(); setTimeout(() => { if (BOT.ask) botEnd(); }, 15000); } }, 1600);
+  }
+
+  /* ── 그리기 고리 ── */
+  function loop(t) {
+    const dt = Math.min(.1, (t - (lastT || t)) / 1000); lastT = t;
+    if (ptr) trail.push(ptr.slice()); else if (trail.length) trail.push(trail[trail.length - 1]);
+    if (trail.length > 160) trail.splice(0, trail.length - 160);
+    RH.push([t, R.x, R.y, R.w, R.h]); while (RH.length > 2 && RH[1][0] < t - 9000) RH.shift();
+    readBeat(dt, t);
+    if (isLive()) { drawLive(t); if (frames % 30 === 0) placeSel(); sel.classList.remove('ghost'); }
+    else {
+      const rate = S.spd + (S.beat ? 2.2 * bump : 0);          // 음악에 맞추면 「쿵」 할 때마다 한 걸음 더 간다
+      if (!RM && rate > 0 && t > holdUntil) mt += dt * rate;
+      const P = pose(mt);
+      drawLevels(t, P);
+      sel.classList.toggle('ghost', !(P.D < .001 && Math.abs(P.c - 1) < .001 && Math.abs(P.tw) < .05 && (!P.chain || (P.mt <= 0 && P.born > .999))));
+    }
+    if (rec) { if (rec.t0) recTick(performance.now()); if (frames % 15 === 0) paintRec(); }
+    frames++; if (t - fpsT > 1000) { ui.fps.textContent = frames + ' fps'; frames = 0; fpsT = t; }
+    requestAnimationFrame(loop);
+  }
+  /* ══ 화면 언어(한국어 · English) — 화면 글 · 상태 문구 · 영상 속 가짜 바탕화면 글자까지. 고른 것은 기억한다 ══ */
+  function applyLang() {
+    LANG = S.lang;
+    document.documentElement.lang = LANG;
+    document.title = L('무한 거울', 'Infinite Mirror');
+    document.querySelectorAll('[data-en]').forEach(el => { if (el.dataset.ko == null) el.dataset.ko = el.textContent; el.textContent = LANG === 'en' ? el.dataset.en : el.dataset.ko; });
+    document.querySelectorAll('[data-en-html]').forEach(el => { if (el.dataset.koHtml == null) el.dataset.koHtml = el.innerHTML; el.innerHTML = LANG === 'en' ? el.dataset.enHtml : el.dataset.koHtml; });
+    for (const [attr, en, ko] of [['placeholder', 'enPlaceholder', 'koPlaceholder'], ['title', 'enTitle', 'koTitle'], ['aria-label', 'enAriaLabel', 'koAriaLabel']])
+      document.querySelectorAll(`[data-en-${attr}]`).forEach(el => { if (el.dataset[ko] == null) el.dataset[ko] = el.getAttribute(attr) || ''; el.setAttribute(attr, LANG === 'en' ? el.dataset[en] : el.dataset[ko]); });
+    document.querySelectorAll('[data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === LANG));
+    syncInputs(); placeSel(); paintRec(); paintSegs(); paintPlay(); paintThumbs(); botLang();
+  }
+  document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => {
+    if (S.lang === b.dataset.lang) return;
+    S.lang = b.dataset.lang; keep(); applyLang();
+    say(L('화면 언어를 한국어로 바꿨습니다 — 영상 속 바탕화면 글자도 한국어로 나옵니다.', 'Switched to English — the desktop text inside the video is in English too.'));
+  }));
+
+  /* ══ 글자 번역(한글 → 영어) — 크롬에 들어 있는 번역기(Translator API · PC 크롬 138 이상)로 이 PC 안에서 옮긴다 ══ */
+  const HANGUL = /[가-힣ㄱ-ㅎㅏ-ㅣ]/;
+  let koEn = null, koEnP = null;
+  function getTranslator() {                 // 한 번만 만든다 — 받는 중에 다시 눌러도 같은 것을 기다린다
+    if (koEn) return Promise.resolve(koEn);
+    if (!koEnP) koEnP = (async () => {
+      const av = await Promise.race([Translator.availability({ sourceLanguage: 'ko', targetLanguage: 'en' }),   // 이름만 있고 대답이 없는 브라우저(앱 속 크롬 등)도 있다
+        new Promise((_, no) => setTimeout(() => no(new Error(L('이 브라우저의 내장 번역기가 대답하지 않습니다 — 크롬에서 파일을 바로 열어 보세요',
+          'the built-in translator isn’t responding in this browser — open the file directly in Chrome'))), 6000))]);
+      if (av === 'unavailable') throw new Error(L('이 컴퓨터에서는 한국어 → 영어 번역기를 쓸 수 없습니다', 'the Korean → English translator isn’t available on this computer'));
+      if (av !== 'available') say(L('번역기를 처음 한 번 받는 중입니다 …', 'Downloading the translator (first time only) …'));
+      return Translator.create({ sourceLanguage: 'ko', targetLanguage: 'en',
+        monitor(m) { m.addEventListener('downloadprogress', e => say(L(`번역기를 받는 중 … ${Math.round(e.loaded * 100)}%`, `Downloading the translator … ${Math.round(e.loaded * 100)}%`))); } });
+    })().then(t => { koEn = t; return t; }, e => { koEnP = null; throw e; });
+    return koEnP;
+  }
+  async function translateText() {
+    const src = S.text.trim(), btn = $('trBtn');
+    if (!src || !HANGUL.test(src)) return say(L('먼저 글자 칸에 한글을 쓰세요.', 'Type some Korean in the text box first.'), true);
+    if (!('Translator' in self)) return say(L('이 브라우저에는 내장 번역기가 없습니다 — PC 크롬 138 이상에서 됩니다. 영어 문구를 직접 써 넣어도 됩니다.',
+      'This browser has no built-in translator — it needs Chrome 138 or later on a computer. You can also type the English yourself.'), true);
+    btn.disabled = true;
+    try {
+      const wait = new Promise((_, no) => setTimeout(() => no(new Error('still-downloading')), 25000));
+      koEn = await Promise.race([getTranslator(), wait]);
+      say(L('옮기는 중 …', 'Translating …'));
+      const lines = src.split(/\r?\n/).map(x => x.trim()).filter(Boolean), en = [];
+      for (const l of lines) en.push(HANGUL.test(l) ? String(await koEn.translate(l)).trim() : l);
+      const out = S.trKeep ? lines.concat(en.filter((x, i) => HANGUL.test(lines[i]))) : en;
+      S.text = out.join('\n').slice(0, 160); $('txt').value = S.text; keep();
+      say(L('영어로 옮겼습니다 — 글자 칸에서 고쳐 쓸 수 있습니다.', 'Translated into English — you can edit it in the text box.') + (out.length > 4 ? L(' 화면에는 앞의 네 줄만 나옵니다.', ' Only the first four lines are shown.') : ''));
+    } catch (e) {
+      if (e && e.message === 'still-downloading') say(L('번역기를 아직 받는 중입니다 — 조금 뒤 「영어로 번역」 을 다시 눌러 주세요(처음 한 번만 받습니다).', 'The translator is still downloading — press “Translate to English” again in a little while (only the first time).'));
+      else say(L('번역하지 못했습니다 — ', 'Couldn’t translate — ') + ((e && e.message) || e), true);
+    } finally { btn.disabled = false; }
+  }
+  $('trBtn').addEventListener('click', translateText);
+
+  applyLang(); look(); resize(); setMode('sim'); requestAnimationFrame(loop); botInit();
+})();
+</script>
+</body>
+</html>
